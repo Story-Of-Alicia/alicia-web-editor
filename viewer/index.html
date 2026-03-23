@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Alicia Model Viewer</title>
+  <link rel="stylesheet" href="style.css">
+  <script async src="https://unpkg.com/es-module-shims@1.8.3/dist/es-module-shims.js"></script>
+  <script type="importmap">
+  {
+    "imports": {
+      "three":          "https://cdn.jsdelivr.net/npm/three@0.162.0/build/three.module.js",
+      "three/addons/":  "https://cdn.jsdelivr.net/npm/three@0.162.0/examples/jsm/"
+    }
+  }
+  </script>
+</head>
+<body>
+
+<!-- Toolbar -->
+<header id="toolbar">
+  <h1>⟐ Alicia Viewer</h1>
+
+  <!-- Tab buttons -->
+  <div class="tab-group">
+    <button class="tab-btn active" id="tab-char">Character</button>
+    <button class="tab-btn" id="tab-map">Map</button>
+    <button class="tab-btn" id="tab-assets">Assets</button>
+  </div>
+
+  <div class="toolbar-sep"></div>
+
+  <!-- Character-mode controls -->
+  <div id="char-toolbar">
+    <label for="char-select">Char</label>
+    <select id="char-select"></select>
+    <button class="btn-icon" id="btn-bones">Bones</button>
+    <button class="btn-icon" id="btn-wire">Wire</button>
+  </div>
+
+  <!-- Assets-mode controls -->
+  <div id="assets-toolbar" style="display:none">
+    <input type="text" id="assets-search" placeholder="Filter assets…" autocomplete="off">
+  </div>
+
+  <!-- Map-mode controls -->
+  <div id="map-toolbar" style="display:none">
+    <label for="map-select">Map</label>
+    <select id="map-select"></select>
+    <button class="btn-icon" id="btn-map-wire">Wire</button>
+    <button class="btn-icon" id="btn-map-nodes">Nodes</button>
+  </div>
+
+  <span id="status">Initialising…</span>
+
+  <div class="light-panel">
+    <span>Light</span>
+    <label>X <input type="range" id="light-x" min="-5" max="5" step="0.1" value="1.5"></label>
+    <label>Y <input type="range" id="light-y" min="0" max="5" step="0.1" value="2.0"></label>
+    <label>Z <input type="range" id="light-z" min="-5" max="5" step="0.1" value="2.0"></label>
+    <label>Int <input type="range" id="light-int" min="0" max="3" step="0.05" value="1.2"></label>
+  </div>
+</header>
+
+<!-- Sidebar: two sections stacked -->
+<aside id="sidebar">
+
+  <!-- Character sidebar -->
+  <div id="char-sidebar">
+    <div class="sidebar-section">
+      <h2>Parts</h2>
+      <div id="slots-panel"></div>
+    </div>
+    <div class="sidebar-section sidebar-anims">
+      <h2>Animations</h2>
+      <ul id="anim-list"></ul>
+    </div>
+  </div>
+
+  <!-- Map sidebar -->
+  <div id="map-sidebar" style="display:none">
+    <div class="sidebar-section">
+      <h2>Objects</h2>
+      <ul id="map-object-list"></ul>
+    </div>
+  </div>
+
+  <!-- Assets sidebar -->
+  <div id="assets-sidebar" style="display:none">
+    <div class="sidebar-section sidebar-anims asset-browser-section">
+      <h2>Asset Browser</h2>
+      <div id="asset-tree"></div>
+    </div>
+    <div class="sidebar-section asset-detail-section">
+      <h2>Details</h2>
+      <div id="asset-detail">
+        <p class="asset-empty">Select a file or chunk to inspect it here.</p>
+      </div>
+    </div>
+  </div>
+
+</aside>
+
+<!-- 3D Viewport -->
+<main id="viewport">
+  <canvas id="canvas"></canvas>
+</main>
+
+<!-- Controls bar -->
+<footer id="controls">
+  <button class="ctrl-btn" id="btn-play">▶</button>
+  <button class="ctrl-btn" id="btn-pause">⏸</button>
+  <button class="ctrl-btn" id="btn-stop">⏹</button>
+  <input type="range" id="timeline" min="0" max="1" step="0.001" value="0">
+  <span id="time-label">0.00 / 0.00</span>
+  <div class="speed-group">
+    <label>Speed</label>
+    <input type="range" id="speed-range" min="0.1" max="3" step="0.1" value="1">
+    <span id="speed-label">1.0×</span>
+  </div>
+</footer>
+
+<script type="module" src="js/main.js"></script>
+</body>
+</html>

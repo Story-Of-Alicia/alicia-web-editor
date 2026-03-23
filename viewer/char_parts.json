@@ -1,0 +1,2162 @@
+{
+  "r00": {
+    "slots": [
+      {
+        "id": "hair",
+        "label": "Hair",
+        "parts": [
+          {
+            "mesh": "r00_cha000_00_a",
+            "desc": "여자기본머리카락",
+            "released": true
+          },
+          {
+            "mesh": "r00_cha000_invisible",
+            "desc": "r00_cha000_invisible",
+            "released": true
+          },
+          {
+            "mesh": "r00_cha001_00_a",
+            "desc": "r00_cha001_00_a",
+            "released": true
+          },
+          {
+            "mesh": "r00_cha002_00_a",
+            "desc": "r00_cha002_00_a",
+            "released": true
+          },
+          {
+            "mesh": "r00_cha003_00_a",
+            "desc": "r00_cha003_00_a",
+            "released": true
+          },
+          {
+            "mesh": "r00_cha014_00_a",
+            "desc": "r00_cha014_00_a",
+            "released": true
+          },
+          {
+            "mesh": "r00_cha018_00_a",
+            "desc": "r00_cha018_00_a",
+            "released": true
+          },
+          {
+            "mesh": "r00_cha019_00_a",
+            "desc": "r00_cha019_00_a",
+            "released": true
+          },
+          {
+            "mesh": "r00_cha020_00_a",
+            "desc": "r00_cha020_00_a",
+            "released": true
+          },
+          {
+            "mesh": "r00_cha021_00_a",
+            "desc": "r00_cha021_00_a",
+            "released": true
+          },
+          {
+            "mesh": "r00_cha022_00_a",
+            "desc": "r00_cha022_00_a",
+            "released": true
+          },
+          {
+            "mesh": "r00_cha023_00_a",
+            "desc": "r00_cha023_00_a",
+            "released": true
+          },
+          {
+            "mesh": "r00_cha024_00_a",
+            "desc": "r00_cha024_00_a",
+            "released": true
+          },
+          {
+            "mesh": "r00_cha025_00_a",
+            "desc": "r00_cha025_00_a",
+            "released": true
+          },
+          {
+            "mesh": "r00_cha026_00_a",
+            "desc": "r00_cha026_00_a",
+            "released": true
+          },
+          {
+            "mesh": "r00_cha028_00_a",
+            "desc": "r00_cha028_00_a",
+            "released": true
+          },
+          {
+            "mesh": "r00_cha029_00_a",
+            "desc": "r00_cha029_00_a",
+            "released": true
+          },
+          {
+            "mesh": "r00_cha030_00_a",
+            "desc": "r00_cha030_00_a",
+            "released": true
+          },
+          {
+            "mesh": "r00_cha901_00_a",
+            "desc": "r00_cha901_00_a",
+            "released": true
+          }
+        ]
+      },
+      {
+        "id": "mouth",
+        "label": "Mouth",
+        "parts": [
+          {
+            "mesh": "r00_cfe000_00_a",
+            "desc": "Happy lips",
+            "released": true
+          },
+          {
+            "mesh": "r00_cfe001_00_a",
+            "desc": "Excited lips",
+            "released": true
+          },
+          {
+            "mesh": "r00_cfe002_00_a",
+            "desc": "Serious lips",
+            "released": true
+          },
+          {
+            "mesh": "r00_cfe004_00_a",
+            "desc": "Calm lips",
+            "released": true
+          },
+          {
+            "mesh": "r00_cfe005_00_a",
+            "desc": "Cheerful lips",
+            "released": true
+          },
+          {
+            "mesh": "r00_cfe000_00_b",
+            "desc": "벌린입",
+            "released": false
+          },
+          {
+            "mesh": "r00_cfe000_00_c",
+            "desc": "웃는입",
+            "released": false
+          },
+          {
+            "mesh": "r00_cfe000_00_d",
+            "desc": "우는입",
+            "released": false
+          },
+          {
+            "mesh": "r00_cfe001_00_b",
+            "desc": "벌린입",
+            "released": false
+          },
+          {
+            "mesh": "r00_cfe001_00_c",
+            "desc": "웃는입",
+            "released": false
+          },
+          {
+            "mesh": "r00_cfe001_00_d",
+            "desc": "우는입",
+            "released": false
+          },
+          {
+            "mesh": "r00_cfe002_00_b",
+            "desc": "벌린입",
+            "released": false
+          },
+          {
+            "mesh": "r00_cfe002_00_c",
+            "desc": "웃는입",
+            "released": false
+          },
+          {
+            "mesh": "r00_cfe002_00_d",
+            "desc": "우는입",
+            "released": false
+          },
+          {
+            "mesh": "r00_cfe004_00_b",
+            "desc": "벌린입",
+            "released": false
+          },
+          {
+            "mesh": "r00_cfe004_00_c",
+            "desc": "웃는입",
+            "released": false
+          },
+          {
+            "mesh": "r00_cfe004_00_d",
+            "desc": "우는입",
+            "released": false
+          },
+          {
+            "mesh": "r00_cfe005_00_b",
+            "desc": "벌린입",
+            "released": false
+          },
+          {
+            "mesh": "r00_cfe005_00_c",
+            "desc": "웃는입",
+            "released": false
+          },
+          {
+            "mesh": "r00_cfe005_00_d",
+            "desc": "우는입",
+            "released": false
+          },
+          {
+            "mesh": "r00_cfe901_00_a",
+            "desc": "주나 얼굴",
+            "released": false
+          }
+        ]
+      },
+      {
+        "id": "eyes",
+        "label": "Eyes",
+        "parts": [
+          {
+            "mesh": "r00_cee000_00_a",
+            "desc": "Comfortable eyes",
+            "released": true
+          },
+          {
+            "mesh": "r00_cee001_00_a",
+            "desc": "Cat eyes",
+            "released": true
+          },
+          {
+            "mesh": "r00_cee002_00_a",
+            "desc": "Fierce eyes",
+            "released": true
+          },
+          {
+            "mesh": "r00_cee004_00_a",
+            "desc": "Charming eyes",
+            "released": true
+          },
+          {
+            "mesh": "r00_cee005_00_a",
+            "desc": "Innocent eyes",
+            "released": true
+          },
+          {
+            "mesh": "r00_cee000_00_b",
+            "desc": "감은눈",
+            "released": false
+          },
+          {
+            "mesh": "r00_cee000_00_c",
+            "desc": "웃는눈",
+            "released": false
+          },
+          {
+            "mesh": "r00_cee000_00_d",
+            "desc": "우는눈",
+            "released": false
+          },
+          {
+            "mesh": "r00_cee001_00_b",
+            "desc": "감은눈",
+            "released": false
+          },
+          {
+            "mesh": "r00_cee001_00_c",
+            "desc": "웃는눈",
+            "released": false
+          },
+          {
+            "mesh": "r00_cee001_00_d",
+            "desc": "우는눈",
+            "released": false
+          },
+          {
+            "mesh": "r00_cee002_00_b",
+            "desc": "감은눈",
+            "released": false
+          },
+          {
+            "mesh": "r00_cee002_00_c",
+            "desc": "웃는눈",
+            "released": false
+          },
+          {
+            "mesh": "r00_cee002_00_d",
+            "desc": "우는눈",
+            "released": false
+          },
+          {
+            "mesh": "r00_cee004_00_b",
+            "desc": "감은눈",
+            "released": false
+          },
+          {
+            "mesh": "r00_cee004_00_c",
+            "desc": "웃는눈",
+            "released": false
+          },
+          {
+            "mesh": "r00_cee004_00_d",
+            "desc": "우는눈",
+            "released": false
+          },
+          {
+            "mesh": "r00_cee005_00_b",
+            "desc": "감은눈",
+            "released": false
+          },
+          {
+            "mesh": "r00_cee005_00_c",
+            "desc": "웃는눈",
+            "released": false
+          },
+          {
+            "mesh": "r00_cee005_00_d",
+            "desc": "우는눈",
+            "released": false
+          },
+          {
+            "mesh": "r00_cee901_00_a",
+            "desc": "주나 눈",
+            "released": false
+          }
+        ]
+      },
+      {
+        "id": "top",
+        "label": "Top",
+        "parts": [
+          {
+            "mesh": "r00_cbt000_00_a",
+            "desc": "여자기본상의",
+            "released": true
+          },
+          {
+            "mesh": "r00_cbt000_invisible",
+            "desc": "r00_cbt000_invisible",
+            "released": true
+          },
+          {
+            "mesh": "r00_cbt001_00_a",
+            "desc": "r00_cbt001_00_a",
+            "released": true
+          },
+          {
+            "mesh": "r00_cbt002_00_a",
+            "desc": "r00_cbt002_00_a",
+            "released": true
+          },
+          {
+            "mesh": "r00_cbt003_00_a",
+            "desc": "r00_cbt003_00_a",
+            "released": true
+          },
+          {
+            "mesh": "r00_cbt004_00_b",
+            "desc": "r00_cbt004_00_b",
+            "released": true,
+            "dress": true
+          },
+          {
+            "mesh": "r00_cbt005_00_a",
+            "desc": "r00_cbt005_00_a",
+            "released": true
+          },
+          {
+            "mesh": "r00_cbt007_00_a",
+            "desc": "r00_cbt007_00_a",
+            "released": true
+          },
+          {
+            "mesh": "r00_cbt008_00_b",
+            "desc": "r00_cbt008_00_b",
+            "released": true,
+            "dress": true
+          },
+          {
+            "mesh": "r00_cbt009_00_a",
+            "desc": "r00_cbt009_00_a",
+            "released": true
+          },
+          {
+            "mesh": "r00_cbt010_00_a",
+            "desc": "r00_cbt010_00_a",
+            "released": true
+          },
+          {
+            "mesh": "r00_cbt011_00_b",
+            "desc": "r00_cbt011_00_b",
+            "released": true,
+            "dress": true
+          },
+          {
+            "mesh": "r00_cbt012_00_b",
+            "desc": "r00_cbt012_00_b",
+            "released": true,
+            "dress": true
+          },
+          {
+            "mesh": "r00_cbt013_00_b",
+            "desc": "r00_cbt013_00_b",
+            "released": true,
+            "dress": true
+          },
+          {
+            "mesh": "r00_cbt014_00_b",
+            "desc": "r00_cbt014_00_b",
+            "released": true,
+            "dress": true
+          },
+          {
+            "mesh": "r00_cbt015_00_b",
+            "desc": "r00_cbt015_00_b",
+            "released": true,
+            "dress": true
+          },
+          {
+            "mesh": "r00_cbt016_00_b",
+            "desc": "r00_cbt016_00_b",
+            "released": true,
+            "dress": true
+          },
+          {
+            "mesh": "r00_cbt017_00_b",
+            "desc": "r00_cbt017_00_b",
+            "released": true,
+            "dress": true
+          },
+          {
+            "mesh": "r00_cbt018_00_b",
+            "desc": "r00_cbt018_00_b",
+            "released": true,
+            "dress": true
+          },
+          {
+            "mesh": "r00_cbt019_00_a",
+            "desc": "r00_cbt019_00_a",
+            "released": true
+          },
+          {
+            "mesh": "r00_cbt020_00_a",
+            "desc": "r00_cbt020_00_a",
+            "released": true
+          },
+          {
+            "mesh": "r00_cbt021_00_b",
+            "desc": "r00_cbt021_00_b",
+            "released": true,
+            "dress": true
+          },
+          {
+            "mesh": "r00_cbt022_00_a",
+            "desc": "r00_cbt022_00_a",
+            "released": true
+          },
+          {
+            "mesh": "r00_cbt023_00_a",
+            "desc": "r00_cbt023_00_a",
+            "released": true
+          },
+          {
+            "mesh": "r00_cbt024_00_b",
+            "desc": "r00_cbt024_00_b",
+            "released": true,
+            "dress": true
+          },
+          {
+            "mesh": "r00_cbt025_00_a",
+            "desc": "r00_cbt025_00_a",
+            "released": true
+          },
+          {
+            "mesh": "r00_cbt026_00_b",
+            "desc": "r00_cbt026_00_b",
+            "released": true,
+            "dress": true
+          },
+          {
+            "mesh": "r00_cbt027_00_b",
+            "desc": "r00_cbt027_00_b",
+            "released": true,
+            "dress": true
+          },
+          {
+            "mesh": "r00_cbt028_00_b",
+            "desc": "r00_cbt028_00_b",
+            "released": true,
+            "dress": true
+          },
+          {
+            "mesh": "r00_cbt029_00_b",
+            "desc": "r00_cbt029_00_b",
+            "released": true,
+            "dress": true
+          },
+          {
+            "mesh": "r00_cbt030_00_b",
+            "desc": "r00_cbt030_00_b",
+            "released": true,
+            "dress": true
+          },
+          {
+            "mesh": "r00_cbt031_00_b",
+            "desc": "r00_cbt031_00_b",
+            "released": true,
+            "dress": true
+          },
+          {
+            "mesh": "r00_cbt032_00_b",
+            "desc": "r00_cbt032_00_b",
+            "released": true,
+            "dress": true
+          },
+          {
+            "mesh": "r00_cbt033_00_b",
+            "desc": "r00_cbt033_00_b",
+            "released": true,
+            "dress": true
+          },
+          {
+            "mesh": "r00_cbt036_00_b",
+            "desc": "r00_cbt036_00_b",
+            "released": true,
+            "dress": true
+          },
+          {
+            "mesh": "r00_cbt037_00_b",
+            "desc": "r00_cbt037_00_b",
+            "released": true,
+            "dress": true
+          },
+          {
+            "mesh": "r00_cbt038_00_b",
+            "desc": "r00_cbt038_00_b",
+            "released": true,
+            "dress": true
+          },
+          {
+            "mesh": "r00_cbt039_00_b",
+            "desc": "r00_cbt039_00_b",
+            "released": true,
+            "dress": true
+          },
+          {
+            "mesh": "r00_cbt040_00_b",
+            "desc": "r00_cbt040_00_b",
+            "released": true,
+            "dress": true
+          },
+          {
+            "mesh": "r00_cbt041_00_b",
+            "desc": "r00_cbt041_00_b",
+            "released": true,
+            "dress": true
+          },
+          {
+            "mesh": "r00_cbt042_00_b",
+            "desc": "r00_cbt042_00_b",
+            "released": true,
+            "dress": true
+          },
+          {
+            "mesh": "r00_cbt043_00_b",
+            "desc": "r00_cbt043_00_b",
+            "released": true,
+            "dress": true
+          },
+          {
+            "mesh": "r00_cbt044_00_b",
+            "desc": "r00_cbt044_00_b",
+            "released": true,
+            "dress": true
+          },
+          {
+            "mesh": "r00_cbt045_00_b",
+            "desc": "r00_cbt045_00_b",
+            "released": true,
+            "dress": true
+          },
+          {
+            "mesh": "r00_cbt046_00_b",
+            "desc": "r00_cbt046_00_b",
+            "released": true,
+            "dress": true
+          },
+          {
+            "mesh": "r00_cbt047_00_b",
+            "desc": "r00_cbt047_00_b",
+            "released": true,
+            "dress": true
+          },
+          {
+            "mesh": "r00_cbt048_00_a",
+            "desc": "r00_cbt048_00_a",
+            "released": true
+          },
+          {
+            "mesh": "r00_cbt049_00_b",
+            "desc": "r00_cbt049_00_b",
+            "released": true,
+            "dress": true
+          },
+          {
+            "mesh": "r00_cbt050_00_b",
+            "desc": "r00_cbt050_00_b",
+            "released": true,
+            "dress": true
+          },
+          {
+            "mesh": "r00_cbt051_00_b",
+            "desc": "r00_cbt051_00_b",
+            "released": true,
+            "dress": true
+          },
+          {
+            "mesh": "r00_cbt052_00_b",
+            "desc": "r00_cbt052_00_b",
+            "released": true,
+            "dress": true
+          },
+          {
+            "mesh": "r00_cbt053_00_b",
+            "desc": "r00_cbt053_00_b",
+            "released": true,
+            "dress": true
+          },
+          {
+            "mesh": "r00_cbt054_00_b",
+            "desc": "r00_cbt054_00_b",
+            "released": true,
+            "dress": true
+          },
+          {
+            "mesh": "r00_cbt055_00_b",
+            "desc": "r00_cbt055_00_b",
+            "released": true,
+            "dress": true
+          },
+          {
+            "mesh": "r00_cbt056_00_b",
+            "desc": "r00_cbt056_00_b",
+            "released": true,
+            "dress": true
+          },
+          {
+            "mesh": "r00_cbt057_00_a",
+            "desc": "r00_cbt057_00_a",
+            "released": true
+          },
+          {
+            "mesh": "r00_cbt058_00_b",
+            "desc": "r00_cbt058_00_b",
+            "released": true,
+            "dress": true
+          },
+          {
+            "mesh": "r00_cbt059_00_b",
+            "desc": "r00_cbt059_00_b",
+            "released": true,
+            "dress": true
+          },
+          {
+            "mesh": "r00_cbt060_00_b",
+            "desc": "r00_cbt060_00_b",
+            "released": true,
+            "dress": true
+          },
+          {
+            "mesh": "r00_cbt061_00_b",
+            "desc": "r00_cbt061_00_b",
+            "released": true,
+            "dress": true
+          },
+          {
+            "mesh": "r00_cbt062_00_a",
+            "desc": "r00_cbt062_00_a",
+            "released": true
+          },
+          {
+            "mesh": "r00_cbt064_00_b",
+            "desc": "r00_cbt064_00_b",
+            "released": true,
+            "dress": true
+          },
+          {
+            "mesh": "r00_cbt065_00_b",
+            "desc": "r00_cbt065_00_b",
+            "released": true,
+            "dress": true
+          },
+          {
+            "mesh": "r00_cbt067_00_b",
+            "desc": "r00_cbt067_00_b",
+            "released": true,
+            "dress": true
+          },
+          {
+            "mesh": "r00_cbt070_00_b",
+            "desc": "r00_cbt070_00_b",
+            "released": true,
+            "dress": true
+          },
+          {
+            "mesh": "r00_cbt078_00_b",
+            "desc": "r00_cbt078_00_b",
+            "released": true,
+            "dress": true
+          },
+          {
+            "mesh": "r00_cbt080_00_b",
+            "desc": "r00_cbt080_00_b",
+            "released": true,
+            "dress": true
+          },
+          {
+            "mesh": "r00_cbt090_00_a",
+            "desc": "r00_cbt090_00_a",
+            "released": true
+          },
+          {
+            "mesh": "r00_cbt900_00_a",
+            "desc": "r00_cbt900_00_a",
+            "released": true
+          },
+          {
+            "mesh": "r00_cbt901_00_b",
+            "desc": "r00_cbt901_00_b",
+            "released": true,
+            "dress": true
+          }
+        ]
+      },
+      {
+        "id": "bottom",
+        "label": "Bottom",
+        "parts": [
+          {
+            "mesh": "r00_cpt000_00_a",
+            "desc": "여자기본하의",
+            "released": true
+          },
+          {
+            "mesh": "r00_cpt000_invisible",
+            "desc": "r00_cpt000_invisible",
+            "released": true
+          },
+          {
+            "mesh": "r00_cpt001_00_a",
+            "desc": "r00_cpt001_00_a",
+            "released": true
+          },
+          {
+            "mesh": "r00_cpt002_00_a",
+            "desc": "r00_cpt002_00_a",
+            "released": true
+          },
+          {
+            "mesh": "r00_cpt003_00_a",
+            "desc": "r00_cpt003_00_a",
+            "released": true
+          },
+          {
+            "mesh": "r00_cpt005_00_a",
+            "desc": "r00_cpt005_00_a",
+            "released": true
+          },
+          {
+            "mesh": "r00_cpt007_00_a",
+            "desc": "r00_cpt007_00_a",
+            "released": true
+          },
+          {
+            "mesh": "r00_cpt009_00_a",
+            "desc": "r00_cpt009_00_a",
+            "released": true
+          },
+          {
+            "mesh": "r00_cpt010_00_a",
+            "desc": "r00_cpt010_00_a",
+            "released": true
+          },
+          {
+            "mesh": "r00_cpt019_00_a",
+            "desc": "r00_cpt019_00_a",
+            "released": true
+          },
+          {
+            "mesh": "r00_cpt020_00_a",
+            "desc": "r00_cpt020_00_a",
+            "released": true
+          },
+          {
+            "mesh": "r00_cpt022_00_a",
+            "desc": "r00_cpt022_00_a",
+            "released": true
+          },
+          {
+            "mesh": "r00_cpt023_00_a",
+            "desc": "r00_cpt023_00_a",
+            "released": true
+          },
+          {
+            "mesh": "r00_cpt025_00_a",
+            "desc": "r00_cpt025_00_a",
+            "released": true
+          },
+          {
+            "mesh": "r00_cpt048_00_a",
+            "desc": "r00_cpt048_00_a",
+            "released": true
+          },
+          {
+            "mesh": "r00_cpt057_00_a",
+            "desc": "r00_cpt057_00_a",
+            "released": true
+          },
+          {
+            "mesh": "r00_cpt062_00_a",
+            "desc": "r00_cpt062_00_a",
+            "released": true
+          },
+          {
+            "mesh": "r00_cpt090_00_a",
+            "desc": "r00_cpt090_00_a",
+            "released": true
+          },
+          {
+            "mesh": "r00_cpt900_00_a",
+            "desc": "r00_cpt900_00_a",
+            "released": true
+          }
+        ]
+      },
+      {
+        "id": "hat",
+        "label": "Hat",
+        "parts": [
+          {
+            "mesh": "r00_cht003_00_b",
+            "desc": "r00_cht003_00_b",
+            "released": true
+          },
+          {
+            "mesh": "r00_cht007_00_a",
+            "desc": "r00_cht007_00_a",
+            "released": true
+          },
+          {
+            "mesh": "r00_cht012_00_d",
+            "desc": "r00_cht012_00_d",
+            "released": true
+          },
+          {
+            "mesh": "r00_cht013_00_a",
+            "desc": "r00_cht013_00_a",
+            "released": true
+          },
+          {
+            "mesh": "r00_cht015_00_d",
+            "desc": "r00_cht015_00_d",
+            "released": true
+          },
+          {
+            "mesh": "r00_cht016_00_d",
+            "desc": "r00_cht016_00_d",
+            "released": true
+          },
+          {
+            "mesh": "r00_cht018_00_a",
+            "desc": "r00_cht018_00_a",
+            "released": true
+          },
+          {
+            "mesh": "r00_cht020_00_a",
+            "desc": "r00_cht020_00_a",
+            "released": true
+          },
+          {
+            "mesh": "r00_cht021_00_b",
+            "desc": "r00_cht021_00_b",
+            "released": true
+          },
+          {
+            "mesh": "r00_cht024_00_a",
+            "desc": "r00_cht024_00_a",
+            "released": true
+          },
+          {
+            "mesh": "r00_cht025_00_b",
+            "desc": "r00_cht025_00_b",
+            "released": true
+          },
+          {
+            "mesh": "r00_cht026_00_a",
+            "desc": "r00_cht026_00_a",
+            "released": true
+          },
+          {
+            "mesh": "r00_cht029_00_c",
+            "desc": "r00_cht029_00_c",
+            "released": true
+          },
+          {
+            "mesh": "r00_cht030_00_a",
+            "desc": "r00_cht030_00_a",
+            "released": true
+          },
+          {
+            "mesh": "r00_cht031_00_a",
+            "desc": "r00_cht031_00_a",
+            "released": true
+          },
+          {
+            "mesh": "r00_cht036_00_b",
+            "desc": "r00_cht036_00_b",
+            "released": true
+          },
+          {
+            "mesh": "r00_cht037_00_a",
+            "desc": "r00_cht037_00_a",
+            "released": true
+          },
+          {
+            "mesh": "r00_cht038_00_a",
+            "desc": "r00_cht038_00_a",
+            "released": true
+          },
+          {
+            "mesh": "r00_cht039_00_d",
+            "desc": "r00_cht039_00_d",
+            "released": true
+          },
+          {
+            "mesh": "r00_cht040_00_a",
+            "desc": "r00_cht040_00_a",
+            "released": true
+          },
+          {
+            "mesh": "r00_cht041_00_a",
+            "desc": "r00_cht041_00_a",
+            "released": true
+          },
+          {
+            "mesh": "r00_cht042_00_c",
+            "desc": "r00_cht042_00_c",
+            "released": true
+          },
+          {
+            "mesh": "r00_cht043_00_b",
+            "desc": "r00_cht043_00_b",
+            "released": true
+          },
+          {
+            "mesh": "r00_cht044_00_a",
+            "desc": "r00_cht044_00_a",
+            "released": true
+          },
+          {
+            "mesh": "r00_cht045_00_a",
+            "desc": "r00_cht045_00_a",
+            "released": true
+          },
+          {
+            "mesh": "r00_cht047_00_b",
+            "desc": "r00_cht047_00_b",
+            "released": true
+          },
+          {
+            "mesh": "r00_cht048_00_a",
+            "desc": "r00_cht048_00_a",
+            "released": true
+          },
+          {
+            "mesh": "r00_cht049_00_a",
+            "desc": "r00_cht049_00_a",
+            "released": true
+          },
+          {
+            "mesh": "r00_cht051_00_c",
+            "desc": "r00_cht051_00_c",
+            "released": true
+          },
+          {
+            "mesh": "r00_cht052_00_b",
+            "desc": "r00_cht052_00_b",
+            "released": true
+          },
+          {
+            "mesh": "r00_cht053_00_c",
+            "desc": "r00_cht053_00_c",
+            "released": true
+          },
+          {
+            "mesh": "r00_cht054_00_a",
+            "desc": "r00_cht054_00_a",
+            "released": true
+          },
+          {
+            "mesh": "r00_cht055_00_a",
+            "desc": "r00_cht055_00_a",
+            "released": true
+          },
+          {
+            "mesh": "r00_cht056_00_a",
+            "desc": "r00_cht056_00_a",
+            "released": true
+          },
+          {
+            "mesh": "r00_cht057_00_b",
+            "desc": "r00_cht057_00_b",
+            "released": true
+          },
+          {
+            "mesh": "r00_cht058_00_b",
+            "desc": "r00_cht058_00_b",
+            "released": true
+          },
+          {
+            "mesh": "r00_cht059_00_b",
+            "desc": "r00_cht059_00_b",
+            "released": true
+          },
+          {
+            "mesh": "r00_cht060_00_a",
+            "desc": "r00_cht060_00_a",
+            "released": true
+          },
+          {
+            "mesh": "r00_cht061_00_b",
+            "desc": "r00_cht061_00_b",
+            "released": true
+          },
+          {
+            "mesh": "r00_cht062_00_a",
+            "desc": "r00_cht062_00_a",
+            "released": true
+          },
+          {
+            "mesh": "r00_cht064_00_c",
+            "desc": "r00_cht064_00_c",
+            "released": true
+          },
+          {
+            "mesh": "r00_cht065_00_b",
+            "desc": "r00_cht065_00_b",
+            "released": true
+          },
+          {
+            "mesh": "r00_cht067_00_a",
+            "desc": "r00_cht067_00_a",
+            "released": true
+          },
+          {
+            "mesh": "r00_cht070_00_a",
+            "desc": "r00_cht070_00_a",
+            "released": true
+          },
+          {
+            "mesh": "r00_cht078_00_b",
+            "desc": "r00_cht078_00_b",
+            "released": true
+          },
+          {
+            "mesh": "r00_cht080_00_a",
+            "desc": "r00_cht080_00_a",
+            "released": true
+          },
+          {
+            "mesh": "r00_cht090_00_b",
+            "desc": "r00_cht090_00_b",
+            "released": true
+          },
+          {
+            "mesh": "r00_cht900_00_a",
+            "desc": "r00_cht900_00_a",
+            "released": true
+          },
+          {
+            "mesh": "r00_cht901_00_a",
+            "desc": "r00_cht901_00_a",
+            "released": true
+          },
+          {
+            "mesh": "r00_cht902_00_a",
+            "desc": "r00_cht902_00_a",
+            "released": true
+          },
+          {
+            "mesh": "r00_cht903_00_a",
+            "desc": "r00_cht903_00_a",
+            "released": true
+          },
+          {
+            "mesh": "r00_cht904_00_a",
+            "desc": "r00_cht904_00_a",
+            "released": true
+          }
+        ]
+      }
+    ]
+  },
+  "r02": {
+    "slots": [
+      {
+        "id": "hair",
+        "label": "Hair",
+        "parts": [
+          {
+            "mesh": "r02_cha001_00_a",
+            "desc": "남자기본머리카락",
+            "released": true
+          },
+          {
+            "mesh": "r02_cha002_00_a",
+            "desc": "r02_cha002_00_a",
+            "released": true
+          },
+          {
+            "mesh": "r02_cha003_00_a",
+            "desc": "r02_cha003_00_a",
+            "released": true
+          },
+          {
+            "mesh": "r02_cha004_00_a",
+            "desc": "r02_cha004_00_a",
+            "released": true
+          },
+          {
+            "mesh": "r02_cha005_00_a",
+            "desc": "r02_cha005_00_a",
+            "released": true
+          },
+          {
+            "mesh": "r02_cha006_00_a",
+            "desc": "r02_cha006_00_a",
+            "released": true
+          },
+          {
+            "mesh": "r02_cha007_00_a",
+            "desc": "r02_cha007_00_a",
+            "released": true
+          },
+          {
+            "mesh": "r02_cha008_00_a",
+            "desc": "r02_cha008_00_a",
+            "released": true
+          },
+          {
+            "mesh": "r02_cha009_00_a",
+            "desc": "r02_cha009_00_a",
+            "released": true
+          },
+          {
+            "mesh": "r02_cha010_00_a",
+            "desc": "r02_cha010_00_a",
+            "released": true
+          },
+          {
+            "mesh": "r02_cha011_00_a",
+            "desc": "r02_cha011_00_a",
+            "released": true
+          },
+          {
+            "mesh": "r02_cha012_00_a",
+            "desc": "r02_cha012_00_a",
+            "released": true
+          },
+          {
+            "mesh": "r02_cha014_00_a",
+            "desc": "r02_cha014_00_a",
+            "released": true
+          },
+          {
+            "mesh": "r02_cha015_00_a",
+            "desc": "r02_cha015_00_a",
+            "released": true
+          },
+          {
+            "mesh": "r02_cha016_00_a",
+            "desc": "r02_cha016_00_a",
+            "released": true
+          },
+          {
+            "mesh": "r02_cha017_00_a",
+            "desc": "r02_cha017_00_a",
+            "released": true
+          }
+        ]
+      },
+      {
+        "id": "mouth",
+        "label": "Mouth",
+        "parts": [
+          {
+            "mesh": "r02_cfe000_00_a",
+            "desc": "Cheerful lips",
+            "released": true
+          },
+          {
+            "mesh": "r02_cfe001_00_a",
+            "desc": "Serious lips",
+            "released": true
+          },
+          {
+            "mesh": "r02_cfe003_00_a",
+            "desc": "Pouty lips",
+            "released": true
+          },
+          {
+            "mesh": "r02_cfe004_00_a",
+            "desc": "Happy lips",
+            "released": true
+          },
+          {
+            "mesh": "r02_cfe005_00_a",
+            "desc": "Smug lips",
+            "released": true
+          },
+          {
+            "mesh": "r02_cfe000_00_b",
+            "desc": "벌린입",
+            "released": false
+          },
+          {
+            "mesh": "r02_cfe000_00_c",
+            "desc": "웃는입",
+            "released": false
+          },
+          {
+            "mesh": "r02_cfe000_00_d",
+            "desc": "우는입",
+            "released": false
+          },
+          {
+            "mesh": "r02_cfe001_00_b",
+            "desc": "벌린입",
+            "released": false
+          },
+          {
+            "mesh": "r02_cfe001_00_c",
+            "desc": "웃는입",
+            "released": false
+          },
+          {
+            "mesh": "r02_cfe001_00_d",
+            "desc": "우는입",
+            "released": false
+          },
+          {
+            "mesh": "r02_cfe003_00_b",
+            "desc": "벌린입",
+            "released": false
+          },
+          {
+            "mesh": "r02_cfe003_00_c",
+            "desc": "웃는입",
+            "released": false
+          },
+          {
+            "mesh": "r02_cfe003_00_d",
+            "desc": "우는입",
+            "released": false
+          },
+          {
+            "mesh": "r02_cfe004_00_b",
+            "desc": "벌린입",
+            "released": false
+          },
+          {
+            "mesh": "r02_cfe004_00_c",
+            "desc": "웃는입",
+            "released": false
+          },
+          {
+            "mesh": "r02_cfe004_00_d",
+            "desc": "우는입",
+            "released": false
+          },
+          {
+            "mesh": "r02_cfe005_00_b",
+            "desc": "벌린입",
+            "released": false
+          },
+          {
+            "mesh": "r02_cfe005_00_c",
+            "desc": "웃는입",
+            "released": false
+          },
+          {
+            "mesh": "r02_cfe005_00_d",
+            "desc": "우는입",
+            "released": false
+          }
+        ]
+      },
+      {
+        "id": "eyes",
+        "label": "Eyes",
+        "parts": [
+          {
+            "mesh": "r02_cee000_00_a",
+            "desc": "Friendly eyes",
+            "released": true
+          },
+          {
+            "mesh": "r02_cee001_00_a",
+            "desc": "Attentive eyes",
+            "released": true
+          },
+          {
+            "mesh": "r02_cee003_00_a",
+            "desc": "Fierce eyes",
+            "released": true
+          },
+          {
+            "mesh": "r02_cee004_00_a",
+            "desc": "Comfortable eyes",
+            "released": true
+          },
+          {
+            "mesh": "r02_cee005_00_a",
+            "desc": "Cat eyes",
+            "released": true
+          },
+          {
+            "mesh": "r02_cee000_00_b",
+            "desc": "감은눈",
+            "released": false
+          },
+          {
+            "mesh": "r02_cee000_00_c",
+            "desc": "웃는눈",
+            "released": false
+          },
+          {
+            "mesh": "r02_cee000_00_d",
+            "desc": "우는눈",
+            "released": false
+          },
+          {
+            "mesh": "r02_cee001_00_b",
+            "desc": "감은눈",
+            "released": false
+          },
+          {
+            "mesh": "r02_cee001_00_c",
+            "desc": "웃는눈",
+            "released": false
+          },
+          {
+            "mesh": "r02_cee001_00_d",
+            "desc": "우는눈",
+            "released": false
+          },
+          {
+            "mesh": "r02_cee003_00_b",
+            "desc": "감은눈",
+            "released": false
+          },
+          {
+            "mesh": "r02_cee003_00_c",
+            "desc": "웃는눈",
+            "released": false
+          },
+          {
+            "mesh": "r02_cee003_00_d",
+            "desc": "우는눈",
+            "released": false
+          },
+          {
+            "mesh": "r02_cee004_00_b",
+            "desc": "감은눈",
+            "released": false
+          },
+          {
+            "mesh": "r02_cee004_00_c",
+            "desc": "웃는눈",
+            "released": false
+          },
+          {
+            "mesh": "r02_cee004_00_d",
+            "desc": "우는눈",
+            "released": false
+          },
+          {
+            "mesh": "r02_cee005_00_b",
+            "desc": "감은눈",
+            "released": false
+          },
+          {
+            "mesh": "r02_cee005_00_c",
+            "desc": "웃는눈",
+            "released": false
+          },
+          {
+            "mesh": "r02_cee005_00_d",
+            "desc": "우는눈",
+            "released": false
+          }
+        ]
+      },
+      {
+        "id": "top",
+        "label": "Top",
+        "parts": [
+          {
+            "mesh": "r02_cbt000_00_a",
+            "desc": "남자기본상의",
+            "released": true
+          },
+          {
+            "mesh": "r02_cbt002_00_a",
+            "desc": "r02_cbt002_00_a",
+            "released": true
+          },
+          {
+            "mesh": "r02_cbt003_00_a",
+            "desc": "r02_cbt003_00_a",
+            "released": true
+          },
+          {
+            "mesh": "r02_cbt004_00_a",
+            "desc": "r02_cbt004_00_a",
+            "released": true
+          },
+          {
+            "mesh": "r02_cbt005_00_a",
+            "desc": "r02_cbt005_00_a",
+            "released": true
+          },
+          {
+            "mesh": "r02_cbt006_00_a",
+            "desc": "r02_cbt006_00_a",
+            "released": true
+          },
+          {
+            "mesh": "r02_cbt007_00_a",
+            "desc": "r02_cbt007_00_a",
+            "released": true
+          },
+          {
+            "mesh": "r02_cbt008_00_a",
+            "desc": "r02_cbt008_00_a",
+            "released": true
+          },
+          {
+            "mesh": "r02_cbt009_00_b",
+            "desc": "r02_cbt009_00_b",
+            "released": true,
+            "dress": true
+          },
+          {
+            "mesh": "r02_cbt010_00_b",
+            "desc": "r02_cbt010_00_b",
+            "released": true,
+            "dress": true
+          },
+          {
+            "mesh": "r02_cbt011_00_b",
+            "desc": "r02_cbt011_00_b",
+            "released": true,
+            "dress": true
+          },
+          {
+            "mesh": "r02_cbt012_00_a",
+            "desc": "r02_cbt012_00_a",
+            "released": true
+          },
+          {
+            "mesh": "r02_cbt013_00_a",
+            "desc": "r02_cbt013_00_a",
+            "released": true
+          },
+          {
+            "mesh": "r02_cbt014_00_b",
+            "desc": "r02_cbt014_00_b",
+            "released": true,
+            "dress": true
+          },
+          {
+            "mesh": "r02_cbt015_00_b",
+            "desc": "r02_cbt015_00_b",
+            "released": true,
+            "dress": true
+          },
+          {
+            "mesh": "r02_cbt016_00_a",
+            "desc": "r02_cbt016_00_a",
+            "released": true
+          },
+          {
+            "mesh": "r02_cbt017_00_b",
+            "desc": "r02_cbt017_00_b",
+            "released": true,
+            "dress": true
+          },
+          {
+            "mesh": "r02_cbt018_00_b",
+            "desc": "r02_cbt018_00_b",
+            "released": true,
+            "dress": true
+          },
+          {
+            "mesh": "r02_cbt019_00_b",
+            "desc": "r02_cbt019_00_b",
+            "released": true,
+            "dress": true
+          },
+          {
+            "mesh": "r02_cbt020_00_b",
+            "desc": "r02_cbt020_00_b",
+            "released": true,
+            "dress": true
+          },
+          {
+            "mesh": "r02_cbt021_00_b",
+            "desc": "r02_cbt021_00_b",
+            "released": true,
+            "dress": true
+          },
+          {
+            "mesh": "r02_cbt022_00_a",
+            "desc": "r02_cbt022_00_a",
+            "released": true
+          },
+          {
+            "mesh": "r02_cbt023_00_b",
+            "desc": "r02_cbt023_00_b",
+            "released": true,
+            "dress": true
+          },
+          {
+            "mesh": "r02_cbt024_00_b",
+            "desc": "r02_cbt024_00_b",
+            "released": true,
+            "dress": true
+          },
+          {
+            "mesh": "r02_cbt025_00_b",
+            "desc": "r02_cbt025_00_b",
+            "released": true,
+            "dress": true
+          },
+          {
+            "mesh": "r02_cbt026_00_a",
+            "desc": "r02_cbt026_00_a",
+            "released": true
+          },
+          {
+            "mesh": "r02_cbt027_00_a",
+            "desc": "r02_cbt027_00_a",
+            "released": true
+          },
+          {
+            "mesh": "r02_cbt028_00_b",
+            "desc": "r02_cbt028_00_b",
+            "released": true,
+            "dress": true
+          },
+          {
+            "mesh": "r02_cbt029_00_b",
+            "desc": "r02_cbt029_00_b",
+            "released": true,
+            "dress": true
+          },
+          {
+            "mesh": "r02_cbt030_00_b",
+            "desc": "r02_cbt030_00_b",
+            "released": true,
+            "dress": true
+          },
+          {
+            "mesh": "r02_cbt031_00_b",
+            "desc": "r02_cbt031_00_b",
+            "released": true,
+            "dress": true
+          },
+          {
+            "mesh": "r02_cbt032_00_b",
+            "desc": "r02_cbt032_00_b",
+            "released": true,
+            "dress": true
+          },
+          {
+            "mesh": "r02_cbt033_00_b",
+            "desc": "r02_cbt033_00_b",
+            "released": true,
+            "dress": true
+          },
+          {
+            "mesh": "r02_cbt034_00_b",
+            "desc": "r02_cbt034_00_b",
+            "released": true,
+            "dress": true
+          },
+          {
+            "mesh": "r02_cbt035_00_b",
+            "desc": "r02_cbt035_00_b",
+            "released": true,
+            "dress": true
+          },
+          {
+            "mesh": "r02_cbt036_00_b",
+            "desc": "r02_cbt036_00_b",
+            "released": true,
+            "dress": true
+          },
+          {
+            "mesh": "r02_cbt037_00_b",
+            "desc": "r02_cbt037_00_b",
+            "released": true,
+            "dress": true
+          },
+          {
+            "mesh": "r02_cbt038_00_b",
+            "desc": "r02_cbt038_00_b",
+            "released": true,
+            "dress": true
+          },
+          {
+            "mesh": "r02_cbt039_00_b",
+            "desc": "r02_cbt039_00_b",
+            "released": true,
+            "dress": true
+          },
+          {
+            "mesh": "r02_cbt040_00_b",
+            "desc": "r02_cbt040_00_b",
+            "released": true,
+            "dress": true
+          },
+          {
+            "mesh": "r02_cbt041_00_b",
+            "desc": "r02_cbt041_00_b",
+            "released": true,
+            "dress": true
+          },
+          {
+            "mesh": "r02_cbt042_00_b",
+            "desc": "r02_cbt042_00_b",
+            "released": true,
+            "dress": true
+          },
+          {
+            "mesh": "r02_cbt043_00_b",
+            "desc": "r02_cbt043_00_b",
+            "released": true,
+            "dress": true
+          },
+          {
+            "mesh": "r02_cbt044_00_b",
+            "desc": "r02_cbt044_00_b",
+            "released": true,
+            "dress": true
+          },
+          {
+            "mesh": "r02_cbt045_00_a",
+            "desc": "r02_cbt045_00_a",
+            "released": true
+          },
+          {
+            "mesh": "r02_cbt046_00_b",
+            "desc": "r02_cbt046_00_b",
+            "released": true,
+            "dress": true
+          },
+          {
+            "mesh": "r02_cbt047_00_b",
+            "desc": "r02_cbt047_00_b",
+            "released": true,
+            "dress": true
+          },
+          {
+            "mesh": "r02_cbt048_00_b",
+            "desc": "r02_cbt048_00_b",
+            "released": true,
+            "dress": true
+          },
+          {
+            "mesh": "r02_cbt049_00_b",
+            "desc": "r02_cbt049_00_b",
+            "released": true,
+            "dress": true
+          },
+          {
+            "mesh": "r02_cbt050_00_b",
+            "desc": "r02_cbt050_00_b",
+            "released": true,
+            "dress": true
+          },
+          {
+            "mesh": "r02_cbt051_00_b",
+            "desc": "r02_cbt051_00_b",
+            "released": true,
+            "dress": true
+          },
+          {
+            "mesh": "r02_cbt052_00_b",
+            "desc": "r02_cbt052_00_b",
+            "released": true,
+            "dress": true
+          },
+          {
+            "mesh": "r02_cbt053_00_b",
+            "desc": "r02_cbt053_00_b",
+            "released": true,
+            "dress": true
+          },
+          {
+            "mesh": "r02_cbt054_00_a",
+            "desc": "r02_cbt054_00_a",
+            "released": true
+          },
+          {
+            "mesh": "r02_cbt055_00_b",
+            "desc": "r02_cbt055_00_b",
+            "released": true,
+            "dress": true
+          },
+          {
+            "mesh": "r02_cbt056_00_b",
+            "desc": "r02_cbt056_00_b",
+            "released": true,
+            "dress": true
+          },
+          {
+            "mesh": "r02_cbt057_00_b",
+            "desc": "r02_cbt057_00_b",
+            "released": true,
+            "dress": true
+          },
+          {
+            "mesh": "r02_cbt058_00_b",
+            "desc": "r02_cbt058_00_b",
+            "released": true,
+            "dress": true
+          },
+          {
+            "mesh": "r02_cbt059_00_b",
+            "desc": "r02_cbt059_00_b",
+            "released": true,
+            "dress": true
+          },
+          {
+            "mesh": "r02_cbt060_00_a",
+            "desc": "r02_cbt060_00_a",
+            "released": true
+          },
+          {
+            "mesh": "r02_cbt061_00_b",
+            "desc": "r02_cbt061_00_b",
+            "released": true,
+            "dress": true
+          },
+          {
+            "mesh": "r02_cbt062_00_b",
+            "desc": "r02_cbt062_00_b",
+            "released": true,
+            "dress": true
+          },
+          {
+            "mesh": "r02_cbt064_00_b",
+            "desc": "r02_cbt064_00_b",
+            "released": true,
+            "dress": true
+          },
+          {
+            "mesh": "r02_cbt070_00_b",
+            "desc": "r02_cbt070_00_b",
+            "released": true,
+            "dress": true
+          },
+          {
+            "mesh": "r02_cbt078_00_b",
+            "desc": "r02_cbt078_00_b",
+            "released": true,
+            "dress": true
+          },
+          {
+            "mesh": "r02_cbt080_00_b",
+            "desc": "r02_cbt080_00_b",
+            "released": true,
+            "dress": true
+          },
+          {
+            "mesh": "r02_cbt090_00_a",
+            "desc": "r02_cbt090_00_a",
+            "released": true
+          },
+          {
+            "mesh": "r02_cbt900_00_a",
+            "desc": "r02_cbt900_00_a",
+            "released": true
+          }
+        ]
+      },
+      {
+        "id": "bottom",
+        "label": "Bottom",
+        "parts": [
+          {
+            "mesh": "r02_cpt000_00_a",
+            "desc": "남자",
+            "released": true
+          },
+          {
+            "mesh": "r02_cpt002_00_a",
+            "desc": "r02_cpt002_00_a",
+            "released": true
+          },
+          {
+            "mesh": "r02_cpt003_00_a",
+            "desc": "r02_cpt003_00_a",
+            "released": true
+          },
+          {
+            "mesh": "r02_cpt004_00_a",
+            "desc": "r02_cpt004_00_a",
+            "released": true
+          },
+          {
+            "mesh": "r02_cpt005_00_a",
+            "desc": "r02_cpt005_00_a",
+            "released": true
+          },
+          {
+            "mesh": "r02_cpt006_00_a",
+            "desc": "r02_cpt006_00_a",
+            "released": true
+          },
+          {
+            "mesh": "r02_cpt007_00_a",
+            "desc": "r02_cpt007_00_a",
+            "released": true
+          },
+          {
+            "mesh": "r02_cpt008_00_a",
+            "desc": "r02_cpt008_00_a",
+            "released": true
+          },
+          {
+            "mesh": "r02_cpt012_00_a",
+            "desc": "r02_cpt012_00_a",
+            "released": true
+          },
+          {
+            "mesh": "r02_cpt013_00_a",
+            "desc": "r02_cpt013_00_a",
+            "released": true
+          },
+          {
+            "mesh": "r02_cpt016_00_a",
+            "desc": "r02_cpt016_00_a",
+            "released": true
+          },
+          {
+            "mesh": "r02_cpt022_00_a",
+            "desc": "r02_cpt022_00_a",
+            "released": true
+          },
+          {
+            "mesh": "r02_cpt026_00_a",
+            "desc": "r02_cpt026_00_a",
+            "released": true
+          },
+          {
+            "mesh": "r02_cpt027_00_a",
+            "desc": "r02_cpt027_00_a",
+            "released": true
+          },
+          {
+            "mesh": "r02_cpt045_00_a",
+            "desc": "r02_cpt045_00_a",
+            "released": true
+          },
+          {
+            "mesh": "r02_cpt054_00_a",
+            "desc": "r02_cpt054_00_a",
+            "released": true
+          },
+          {
+            "mesh": "r02_cpt060_00_a",
+            "desc": "r02_cpt060_00_a",
+            "released": true
+          },
+          {
+            "mesh": "r02_cpt090_00_a",
+            "desc": "r02_cpt090_00_a",
+            "released": true
+          },
+          {
+            "mesh": "r02_cpt900_00_a",
+            "desc": "r02_cpt900_00_a",
+            "released": true
+          }
+        ]
+      },
+      {
+        "id": "hat",
+        "label": "Hat",
+        "parts": [
+          {
+            "mesh": "r02_cht004_00_a",
+            "desc": "r02_cht004_00_a",
+            "released": true
+          },
+          {
+            "mesh": "r02_cht007_00_b",
+            "desc": "r02_cht007_00_b",
+            "released": true
+          },
+          {
+            "mesh": "r02_cht009_00_b",
+            "desc": "r02_cht009_00_b",
+            "released": true
+          },
+          {
+            "mesh": "r02_cht010_00_d",
+            "desc": "r02_cht010_00_d",
+            "released": true
+          },
+          {
+            "mesh": "r02_cht013_00_b",
+            "desc": "r02_cht013_00_b",
+            "released": true
+          },
+          {
+            "mesh": "r02_cht014_00_a",
+            "desc": "r02_cht014_00_a",
+            "released": true
+          },
+          {
+            "mesh": "r02_cht015_00_a",
+            "desc": "r02_cht015_00_a",
+            "released": true
+          },
+          {
+            "mesh": "r02_cht016_00_b",
+            "desc": "r02_cht016_00_b",
+            "released": true
+          },
+          {
+            "mesh": "r02_cht018_00_b",
+            "desc": "r02_cht018_00_b",
+            "released": true
+          },
+          {
+            "mesh": "r02_cht019_00_a",
+            "desc": "r02_cht019_00_a",
+            "released": true
+          },
+          {
+            "mesh": "r02_cht023_00_b",
+            "desc": "r02_cht023_00_b",
+            "released": true
+          },
+          {
+            "mesh": "r02_cht024_00_a",
+            "desc": "r02_cht024_00_a",
+            "released": true
+          },
+          {
+            "mesh": "r02_cht025_00_a",
+            "desc": "r02_cht025_00_a",
+            "released": true
+          },
+          {
+            "mesh": "r02_cht028_00_c",
+            "desc": "r02_cht028_00_c",
+            "released": true
+          },
+          {
+            "mesh": "r02_cht030_00_b",
+            "desc": "r02_cht030_00_b",
+            "released": true
+          },
+          {
+            "mesh": "r02_cht032_00_b",
+            "desc": "r02_cht032_00_b",
+            "released": true
+          },
+          {
+            "mesh": "r02_cht034_00_a",
+            "desc": "r02_cht034_00_a",
+            "released": true
+          },
+          {
+            "mesh": "r02_cht035_00_d",
+            "desc": "r02_cht035_00_d",
+            "released": true
+          },
+          {
+            "mesh": "r02_cht036_00_a",
+            "desc": "r02_cht036_00_a",
+            "released": true
+          },
+          {
+            "mesh": "r02_cht037_00_a",
+            "desc": "r02_cht037_00_a",
+            "released": true
+          },
+          {
+            "mesh": "r02_cht038_00_b",
+            "desc": "r02_cht038_00_b",
+            "released": true
+          },
+          {
+            "mesh": "r02_cht039_00_a",
+            "desc": "r02_cht039_00_a",
+            "released": true
+          },
+          {
+            "mesh": "r02_cht040_00_a",
+            "desc": "r02_cht040_00_a",
+            "released": true
+          },
+          {
+            "mesh": "r02_cht041_00_c",
+            "desc": "r02_cht041_00_c",
+            "released": true
+          },
+          {
+            "mesh": "r02_cht042_00_b",
+            "desc": "r02_cht042_00_b",
+            "released": true
+          },
+          {
+            "mesh": "r02_cht043_00_d",
+            "desc": "r02_cht043_00_d",
+            "released": true
+          },
+          {
+            "mesh": "r02_cht045_00_a",
+            "desc": "r02_cht045_00_a",
+            "released": true
+          },
+          {
+            "mesh": "r02_cht046_00_b",
+            "desc": "r02_cht046_00_b",
+            "released": true
+          },
+          {
+            "mesh": "r02_cht048_00_c",
+            "desc": "r02_cht048_00_c",
+            "released": true
+          },
+          {
+            "mesh": "r02_cht049_00_a",
+            "desc": "r02_cht049_00_a",
+            "released": true
+          },
+          {
+            "mesh": "r02_cht050_00_c",
+            "desc": "r02_cht050_00_c",
+            "released": true
+          },
+          {
+            "mesh": "r02_cht053_00_b",
+            "desc": "r02_cht053_00_b",
+            "released": true
+          },
+          {
+            "mesh": "r02_cht054_00_b",
+            "desc": "r02_cht054_00_b",
+            "released": true
+          },
+          {
+            "mesh": "r02_cht055_00_b",
+            "desc": "r02_cht055_00_b",
+            "released": true
+          },
+          {
+            "mesh": "r02_cht056_00_b",
+            "desc": "r02_cht056_00_b",
+            "released": true
+          },
+          {
+            "mesh": "r02_cht057_00_a",
+            "desc": "r02_cht057_00_a",
+            "released": true
+          },
+          {
+            "mesh": "r02_cht058_00_a",
+            "desc": "r02_cht058_00_a",
+            "released": true
+          },
+          {
+            "mesh": "r02_cht059_00_b",
+            "desc": "r02_cht059_00_b",
+            "released": true
+          },
+          {
+            "mesh": "r02_cht060_00_a",
+            "desc": "r02_cht060_00_a",
+            "released": true
+          },
+          {
+            "mesh": "r02_cht061_00_c",
+            "desc": "r02_cht061_00_c",
+            "released": true
+          },
+          {
+            "mesh": "r02_cht062_00_b",
+            "desc": "r02_cht062_00_b",
+            "released": true
+          },
+          {
+            "mesh": "r02_cht064_00_a",
+            "desc": "r02_cht064_00_a",
+            "released": true
+          },
+          {
+            "mesh": "r02_cht070_00_a",
+            "desc": "r02_cht070_00_a",
+            "released": true
+          },
+          {
+            "mesh": "r02_cht078_00_b",
+            "desc": "r02_cht078_00_b",
+            "released": true
+          },
+          {
+            "mesh": "r02_cht080_00_b",
+            "desc": "r02_cht080_00_b",
+            "released": true
+          },
+          {
+            "mesh": "r02_cht090_00_b",
+            "desc": "r02_cht090_00_b",
+            "released": true
+          },
+          {
+            "mesh": "r02_cht900_00_a",
+            "desc": "r02_cht900_00_a",
+            "released": true
+          },
+          {
+            "mesh": "r02_cht901_00_b",
+            "desc": "r02_cht901_00_b",
+            "released": true
+          },
+          {
+            "mesh": "r02_cht902_00_a",
+            "desc": "r02_cht902_00_a",
+            "released": true
+          },
+          {
+            "mesh": "r02_cht903_00_a",
+            "desc": "r02_cht903_00_a",
+            "released": true
+          },
+          {
+            "mesh": "r02_cht904_00_a",
+            "desc": "r02_cht904_00_a",
+            "released": true
+          }
+        ]
+      }
+    ]
+  }
+}
