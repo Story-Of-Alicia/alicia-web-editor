@@ -237,6 +237,10 @@ function normaliseFsPath(path) {
   return String(path ?? '').trim().replace(/\\/g, '/').toLowerCase();
 }
 
+function normaliseAssetPath(path) {
+  return String(path ?? '').trim().replace(/\\/g, '/');
+}
+
 function refreshPakStateFromListing(pakConn, listing) {
   const assets = extractPakAssets(listing);
   state.pakConnection = pakConn;
@@ -256,6 +260,26 @@ function refreshPakStateFromListing(pakConn, listing) {
 
   // Build the PAK tree in the asset browser.
   initPakTree({ ...listing, assets });
+}
+
+function upsertPakListingAsset(listingData, assetPath) {
+  const path = normaliseAssetPath(assetPath);
+  if (!path) return Array.isArray(listingData) ? [...listingData] : [];
+
+  const normalisedPath = path.toLowerCase();
+  const nextAssets = (Array.isArray(listingData) ? listingData : []).map((entry) => ({ ...entry }));
+  const existingIndex = nextAssets.findIndex((entry) => {
+    const listedPath = normaliseAssetPath(entry?.path).toLowerCase();
+    return listedPath === normalisedPath;
+  });
+
+  if (existingIndex >= 0) {
+    nextAssets[existingIndex].path = path;
+  } else {
+    nextAssets.push({ path });
+  }
+
+  return nextAssets;
 }
 
 btnBrowsePak.addEventListener('click', async () => {
@@ -316,7 +340,7 @@ btnAddAssetPak.addEventListener('click', async () => {
       return;
     }
 
-    const assetPath = pathInput.trim();
+    const assetPath = normaliseAssetPath(pathInput);
     if (!assetPath) {
       setStatus('Asset path cannot be empty.', true);
       return;
@@ -326,8 +350,12 @@ btnAddAssetPak.addEventListener('click', async () => {
     const data = await file.arrayBuffer();
     await state.pakConnection.writeAsset(assetPath, data);
 
-    const listing = await state.pakConnection.readPak();
-    refreshPakStateFromListing(state.pakConnection, listing);
+    // Avoid expensive pak.read() after each write; update local listing instead.
+    const updatedAssets = upsertPakListingAsset(state.pakListing, assetPath);
+    refreshPakStateFromListing(state.pakConnection, {
+      resource_path: state.pakResourcePath ?? state.pakConnection.resourcePath ?? '',
+      assets: updatedAssets,
+    });
     setStatus(`Updated asset: ${assetPath}`);
   } catch (err) {
     setStatus(`PAK update error: ${err.message}`, true);

@@ -64,7 +64,10 @@ export class PakConnection {
       resource_path: path,
     });
     this.resourcePath = path;
-    return { resource_path: path, assets: response?.assets ?? [] };
+    return {
+      resource_path: path,
+      assets: this._normaliseAssetEntries(response?.assets ?? []),
+    };
   }
 
   async writePak(resourcePath = this.resourcePath, targetResourcePath = '') {
@@ -94,7 +97,7 @@ export class PakConnection {
   }
 
   async fetchAsset(assetPath, resourcePath = this.resourcePath) {
-    const path = String(assetPath ?? '').trim();
+    const path = this._normaliseAssetPath(assetPath);
     const resource = String(resourcePath ?? '').trim();
     if (!resource) throw new Error('PAK resource path is empty');
     if (!path) throw new Error('Asset path is empty');
@@ -110,7 +113,7 @@ export class PakConnection {
   }
 
   async writeAsset(assetPath, data, resourcePath = this.resourcePath) {
-    const path = String(assetPath ?? '').trim();
+    const path = this._normaliseAssetPath(assetPath);
     const resource = String(resourcePath ?? '').trim();
     if (!resource) throw new Error('PAK resource path is empty');
     if (!path) throw new Error('Asset path is empty');
@@ -131,6 +134,21 @@ export class PakConnection {
     throw new Error('Asset data is not a byte array');
   }
 
+  _normaliseAssetPath(path) {
+    return String(path ?? '').trim().replace(/\\/g, '/');
+  }
+
+  _normaliseAssetEntries(assets) {
+    if (!Array.isArray(assets)) return [];
+    return assets.map((entry) => {
+      const next = { ...(entry ?? {}) };
+      if (typeof next.path === 'string') {
+        next.path = this._normaliseAssetPath(next.path);
+      }
+      return next;
+    });
+  }
+
   _sendRequest(endpoint, payload) {
     return new Promise((resolve, reject) => {
       if (!this.connected) {
@@ -139,7 +157,12 @@ export class PakConnection {
       }
 
       this._pending.push({ resolve, reject });
-      this.ws.send(JSON.stringify({ endpoint, payload }));
+      const safePayload = { ...(payload ?? {}) };
+      if (endpoint === 'asset' && typeof safePayload.asset_path === 'string') {
+        safePayload.asset_path = this._normaliseAssetPath(safePayload.asset_path);
+      }
+
+      this.ws.send(JSON.stringify({ endpoint, payload: safePayload }));
     });
   }
 
