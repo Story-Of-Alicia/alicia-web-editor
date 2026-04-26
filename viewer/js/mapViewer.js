@@ -82,7 +82,7 @@ const atomicFrameQuat = new THREE.Quaternion();
 const atomicFrameScale = new THREE.Vector3();
 
 // ─── BSP 4-layer terrain shader ──────────────────────────────────────────────
-function buildBSP4LayerMaterial(lightMap, t0, t1, t2, t3, layerScale, layerUV, useAlphaComposite = true) {
+function buildBSP4LayerMaterial(lightMap, t0, t1, t2, t3, layerScale, layerUV, useAlphaComposite = true, aoTex = null, specTex = null, blendParams = {}) {
   const makeGray = () => {
     const d = new Uint8Array([128, 128, 128, 255]);
     const tx = new THREE.DataTexture(d, 1, 1); tx.needsUpdate = true; return tx;
@@ -147,10 +147,18 @@ function buildBSP4LayerMaterial(lightMap, t0, t1, t2, t3, layerScale, layerUV, u
     uniform sampler2D tex1;
     uniform sampler2D tex2;
     uniform sampler2D tex3;
+    uniform sampler2D aoMap;
+    uniform sampler2D specMap;
     uniform vec4 uLayerScale;
     uniform vec4 uLayerUV;
     uniform bool uUseLightMap;
     uniform bool uUseAlphaComposite;
+    uniform bool uUseAO;
+    uniform bool uUseSpec;
+    uniform vec3 uLayerEdge;      // c_layerEdge1-3
+    uniform vec4 uLayerDisplace;  // c_layerDiplace0-3
+    uniform float uLtmapTone;     // GLtMapTone global scalar
+    uniform bool uHasPrelit;      // whether aPrelitColor is valid
     varying vec2 vUv0;
     varying vec2 vTilingUV;
     varying vec2 vSecUV;
@@ -232,7 +240,9 @@ function buildBSP4LayerMaterial(lightMap, t0, t1, t2, t3, layerScale, layerUV, u
         col = (e0*blend.r + e1*blend.g + e2*blend.b + e3*blend.a) / total;
         if (uUseLightMap) {
           vec3 lm = texture2D(lightMap, vUv0).rgb;
-          col.rgb *= lm * 2.5;
+          col.rgb *= lm * 2.0 * uLtmapTone;
+        } else if (uHasPrelit) {
+          col.rgb *= vPrelit.rgb * 2.0;
         }
       } else if (uDebugMode > 9.5 && uDebugMode < 10.5) {
         col = vec4(vPrelit.rgb, 1.0);
@@ -265,26 +275,53 @@ function buildBSP4LayerMaterial(lightMap, t0, t1, t2, t3, layerScale, layerUV, u
       } else if (uDebugMode > 25.5 && uDebugMode < 26.5) {
         col = vec4(clamp(vUV6.x, 0.0, 1.0), clamp(vUV6.y, 0.0, 1.0), 0.0, 1.0);
       } else {
-        // 0: Normal rendering: smooth weighted blend with texture alpha compositing
-        if (uUseAlphaComposite) {
-          float w0 = blend.r;
-          float w1 = blend.g;
-          float w2 = blend.b * d2.a;
-          float w3 = blend.a * d3.a;
-          float lost = blend.b * (1.0 - d2.a) + blend.a * (1.0 - d3.a);
-          w0 += lost * (1.0 - vT01);
-          w1 += lost * vT01;
+        // 0: Normal rendering: height-based blending using displacement + edge flags
+        {
+          // layerEdge = per-layer boolean (0/1) enabling height-based edge blend
+          // layerDisplace = height intensity (typically 5), normalized to 0-1 range
+          float dScale = uLayerDisplace.x * 0.15; // e.g. 5 -> 0.75; 0 -> no height influence
+          // c0 is the base layer — it competes on blend weight alone so it cannot
+          // alpha-punch above layers that clearly dominate it (e.g. grass over mud).
+          // Layers 1–3 use layerEdge to opt into height blending (sharp stone/grass edges).
+          float h0 = blend.r;
+          float h1 = d1.a * (uLayerEdge.x > 0.5 ? dScale : 0.0) + blend.g;
+          float h2 = d2.a * (uLayerEdge.y > 0.5 ? dScale : 0.0) + blend.b;
+          // Grass (layer 3): in dense grass zones (high blend.a) use centered displacement
+          // so low-alpha gaps drop below the dirt layer, revealing dirt between clumps.
+          // At zone edges (lower blend.a) fall back to lift-only to preserve soft edges.
+          float grassDisp = uLayerEdge.z > 0.5 ? dScale : 0.0;
+          float liftOnly = d3.a * grassDisp;
+          float centered = (d3.a - 0.5) * 2.0 * grassDisp;
+          float h3 = mix(liftOnly, centered, smoothstep(0.35, 0.65, blend.a)) + blend.a;
+          float depth = 0.25;
+          float hMax = max(max(h0, h1), max(h2, h3)) - depth;
+          float w0 = max(h0 - hMax, 0.0) * blend.r;
+          float w1 = max(h1 - hMax, 0.0) * blend.g;
+          float w2 = max(h2 - hMax, 0.0) * blend.b;
+          float w3 = max(h3 - hMax, 0.0) * blend.a;
           float wTotal = w0 + w1 + w2 + w3;
-          if (wTotal < 0.001) wTotal = 1.0;
-          col = (d0 * w0 + d1 * w1 + d2 * w2 + d3 * w3) / wTotal;
-        } else {
-          // Fallback for maps where diffuse alpha is not reliable.
-          col = (d0*blend.r + d1*blend.g + d2*blend.b + d3*blend.a) / total;
+          if (wTotal < 0.001) {
+            col = (d0*blend.r + d1*blend.g + d2*blend.b + d3*blend.a) / total;
+          } else {
+            col = (d0*w0 + d1*w1 + d2*w2 + d3*w3) / wTotal;
+          }
         }
         col.a = 1.0;
         if (uUseLightMap) {
           vec3 lm = texture2D(lightMap, vUv0).rgb;
-          col.rgb *= lm * 2.5;
+          // MODULATE2X: lightmap value of 0.5 = neutral, >0.5 = brighten, <0.5 = darken
+          col.rgb *= lm * 2.0 * uLtmapTone;
+        } else if (uHasPrelit) {
+          // Prelit vertex color fallback when no lightmap (also MODULATE2X)
+          col.rgb *= vPrelit.rgb * 2.0;
+        }
+        if (uUseAO) {
+          float ao = texture2D(aoMap, vUv0).r;
+          col.rgb *= mix(0.5, 1.0, ao);
+        }
+        if (uUseSpec) {
+          float spec = texture2D(specMap, vUv0).r;
+          col.rgb += col.rgb * spec * 0.3;
         }
       }
 
@@ -302,9 +339,16 @@ function buildBSP4LayerMaterial(lightMap, t0, t1, t2, t3, layerScale, layerUV, u
       tex1:        { value: t1 ?? gray },
       tex2:        { value: t2 ?? gray },
       tex3:        { value: t3 ?? gray },
+      aoMap:       { value: aoTex ?? gray },
+      specMap:     { value: specTex ?? gray },
       uLayerScale: { value: new THREE.Vector4(...layerScale) },
       uLayerUV:    { value: new THREE.Vector4(...layerUV) },
       uUseLightMap:{ value: !!lightMap },
+      uUseAO:      { value: !!aoTex },
+      uUseSpec:    { value: !!specTex },
+      uLayerEdge:  { value: new THREE.Vector3(...(blendParams.layerEdge ?? [0, 0, 0])) },
+      uLayerDisplace: { value: new THREE.Vector4(...(blendParams.layerDisplace ?? [0, 0, 0, 0])) },
+      uLtmapTone:   { value: 1.0 },  // GLtMapTone global (game sets at runtime; 1.0 = identity)
       uUseAlphaComposite: { value: !!useAlphaComposite },
       uDebugMode:  { value: 0 },
     },
@@ -326,18 +370,22 @@ async function buildBSPMesh(geoData, bspMaterials, texDir, resolvedTexOut = null
   const uvTiling   = uvSets[0] ?? empty;
   const uvBlend    = uvSets[3] ?? empty;
   const uvGroup    = uvSets[5] ?? empty;
-  // Diagnostic: dump UV ranges for all 7 sets
-  for (let si = 0; si < 7; si++) {
-    const s = uvSets[si];
-    if (!s) { console.log(`[UV${si}] not present`); continue; }
-    let minU=Infinity, maxU=-Infinity, minV=Infinity, maxV=-Infinity;
-    for (let i = 0; i < s.length; i += 2) {
-      const u = s[i], v = s[i+1];
-      if (u < minU) minU = u; if (u > maxU) maxU = u;
-      if (v < minV) minV = v; if (v > maxV) maxV = v;
+
+  if (BSPParser.DEBUG) {
+    // Diagnostic: dump UV ranges for all 7 sets
+    for (let si = 0; si < 7; si++) {
+      const s = uvSets[si];
+      if (!s) { console.log(`[UV${si}] not present`); continue; }
+      let minU=Infinity, maxU=-Infinity, minV=Infinity, maxV=-Infinity;
+      for (let i = 0; i < s.length; i += 2) {
+        const u = s[i], v = s[i+1];
+        if (u < minU) minU = u; if (u > maxU) maxU = u;
+        if (v < minV) minV = v; if (v > maxV) maxV = v;
+      }
+      console.log(`[UV${si}] U=[${minU.toFixed(4)}, ${maxU.toFixed(4)}] V=[${minV.toFixed(4)}, ${maxV.toFixed(4)}]`);
     }
-    console.log(`[UV${si}] U=[${minU.toFixed(4)}, ${maxU.toFixed(4)}] V=[${minV.toFixed(4)}, ${maxV.toFixed(4)}]`);
   }
+
   const uvSec      = uvSets[2] ?? empty;
   const uv2        = uvSets[2] ?? empty;
   const uv4raw     = uvSets[4] ?? empty;
@@ -358,34 +406,71 @@ async function buildBSPMesh(geoData, bspMaterials, texDir, resolvedTexOut = null
   bufGeo.setAttribute('aUV6',       new THREE.Float32BufferAttribute(uv6, 2));
   if (prelitColors) bufGeo.setAttribute('aPrelitColor', new THREE.Float32BufferAttribute(prelitColors, 4));
 
-  const allIdx = [], mats = [];
-  for (const [matIdx, idx] of [...matGroups.entries()].sort((a, b) => a[0] - b[0])) {
-    bufGeo.addGroup(allIdx.length, idx.length, mats.length);
-    allIdx.push(...idx);
+  // Sort material groups by index for deterministic draw order
+  const sortedGroups = [...matGroups.entries()].sort((a, b) => a[0] - b[0]);
 
-    const bspMat     = bspMaterials[matIdx] ?? null;
-    const layerScale = bspMat?.layerScale ?? [1.0, 1.0, 1.0, 1.0];
-    const layerUV    = bspMat?.layerUV    ?? [0, 0, 0, 0];
+  // Pre-compute total index count to allocate a single typed array upfront.
+  // Using a Uint32Array avoids the spread-operator stack overflow that occurs
+  // with allIdx.push(...idx) when idx contains tens of thousands of elements.
+  const totalIndexCount = sortedGroups.reduce((sum, [, idx]) => sum + idx.length, 0);
+  const allIdx = new Uint32Array(totalIndexCount);
+  let idxOffset = 0;
+
+  // Collect all texture loads upfront so they run in parallel across all groups,
+  // instead of awaiting each group's Promise.all sequentially.
+  const texLoadJobs = sortedGroups.map(([matIdx]) => {
+    const bspMat = bspMaterials[matIdx] ?? null;
     pushUniqueName(resolvedTexOut, bspMat?.ltmapTex);
     pushUniqueName(resolvedTexOut, bspMat?.c0);
     pushUniqueName(resolvedTexOut, bspMat?.c1);
     pushUniqueName(resolvedTexOut, bspMat?.c2);
     pushUniqueName(resolvedTexOut, bspMat?.c3);
-    console.log(`[BSP mat${matIdx}] layerUV=[${layerUV}] scale=[${layerScale.map(f=>f.toFixed(2)).join(',')}] c0=${bspMat?.c0} c1=${bspMat?.c1} c2=${bspMat?.c2} c3=${bspMat?.c3}`);
-
-    const [lightMap, t0, t1, t2, t3] = await Promise.all([
-      bspMat?.ltmapTex ? loadTexture(texDir, bspMat.ltmapTex, THREE.LinearSRGBColorSpace) : Promise.resolve(null),
-      bspMat?.c0 ? loadTexture(texDir, bspMat.c0, THREE.SRGBColorSpace) : Promise.resolve(null),
-      bspMat?.c1 ? loadTexture(texDir, bspMat.c1, THREE.SRGBColorSpace) : Promise.resolve(null),
-      bspMat?.c2 ? loadTexture(texDir, bspMat.c2, THREE.SRGBColorSpace) : Promise.resolve(null),
-      bspMat?.c3 ? loadTexture(texDir, bspMat.c3, THREE.SRGBColorSpace) : Promise.resolve(null),
+    pushUniqueName(resolvedTexOut, bspMat?.aoTex1);
+    pushUniqueName(resolvedTexOut, bspMat?.specTex0);
+    pushUniqueName(resolvedTexOut, bspMat?.sssTex);
+    if (BSPParser.DEBUG) {
+      const layerScale = bspMat?.layerScale ?? [1.0, 1.0, 1.0, 1.0];
+      const layerUV    = bspMat?.layerUV    ?? [0, 0, 0, 0];
+      console.log(`[BSP mat${matIdx}] layerUV=[${layerUV}] scale=[${layerScale.map(f=>f.toFixed(2)).join(',')}] c0=${bspMat?.c0} c1=${bspMat?.c1} c2=${bspMat?.c2} c3=${bspMat?.c3} ao=${bspMat?.aoTex1} spec=${bspMat?.specTex0} sss=${bspMat?.sssTex}`);
+    }
+    return Promise.all([
+      bspMat?.ltmapTex  ? loadTexture(texDir, bspMat.ltmapTex,  THREE.LinearSRGBColorSpace) : Promise.resolve(null),
+      bspMat?.c0        ? loadTexture(texDir, bspMat.c0,         THREE.SRGBColorSpace)        : Promise.resolve(null),
+      bspMat?.c1        ? loadTexture(texDir, bspMat.c1,         THREE.SRGBColorSpace)        : Promise.resolve(null),
+      bspMat?.c2        ? loadTexture(texDir, bspMat.c2,         THREE.SRGBColorSpace)        : Promise.resolve(null),
+      bspMat?.c3        ? loadTexture(texDir, bspMat.c3,         THREE.SRGBColorSpace)        : Promise.resolve(null),
+      bspMat?.aoTex1    ? loadTexture(texDir, bspMat.aoTex1,     THREE.LinearSRGBColorSpace)  : Promise.resolve(null),
+      bspMat?.specTex0  ? loadTexture(texDir, bspMat.specTex0,   THREE.LinearSRGBColorSpace)  : Promise.resolve(null),
     ]);
-    console.log(`[BSP tex${matIdx}] loaded: t0=${t0?'OK':'FAIL'}(${bspMat?.c0}) t1=${t1?'OK':'FAIL'}(${bspMat?.c1}) t2=${t2?'OK':'FAIL'}(${bspMat?.c2}) t3=${t3?'OK':'FAIL'}(${bspMat?.c3}) lm=${lightMap?'OK':'FAIL'}`);
+  });
 
-    mats.push(buildBSP4LayerMaterial(lightMap, t0, t1, t2, t3, layerScale, layerUV, useAlphaComposite));
+  // Wait for all texture batches in parallel
+  const allTexResults = await Promise.all(texLoadJobs);
+
+  const mats = [];
+  for (let gi = 0; gi < sortedGroups.length; gi++) {
+    const [matIdx, idx] = sortedGroups[gi];
+    const bspMat = bspMaterials[matIdx] ?? null;
+    const layerScale = bspMat?.layerScale ?? [1.0, 1.0, 1.0, 1.0];
+    const layerUV    = bspMat?.layerUV    ?? [0, 0, 0, 0];
+
+    // Write indices directly into the pre-allocated typed array — no spread, no GC pressure
+    bufGeo.addGroup(idxOffset, idx.length, mats.length);
+    allIdx.set(idx, idxOffset);
+    idxOffset += idx.length;
+
+    const [lightMap, t0, t1, t2, t3, aoTex, specTex] = allTexResults[gi];
+    if (BSPParser.DEBUG) {
+      console.log(`[BSP tex${matIdx}] loaded: t0=${t0?'OK':'FAIL'}(${bspMat?.c0}) t1=${t1?'OK':'FAIL'}(${bspMat?.c1}) t2=${t2?'OK':'FAIL'}(${bspMat?.c2}) t3=${t3?'OK':'FAIL'}(${bspMat?.c3}) lm=${lightMap?'OK':'FAIL'} ao=${aoTex?'OK':'FAIL'} spec=${specTex?'OK':'FAIL'}`);
+    }
+
+    mats.push(buildBSP4LayerMaterial(lightMap, t0, t1, t2, t3, layerScale, layerUV, useAlphaComposite, aoTex, specTex, {
+      layerEdge:    bspMat?.layerEdge,
+      layerDisplace: bspMat?.layerDisplace,
+    }));
   }
 
-  bufGeo.setIndex(allIdx);
+  bufGeo.setIndex(new THREE.BufferAttribute(allIdx, 1));
   if (!normals) bufGeo.computeVertexNormals();
   return new THREE.Mesh(bufGeo, mats);
 }
@@ -557,7 +642,7 @@ export async function loadMap(abinFile) {
             const parser = new BSPParser();
             bspTextures  = parser.parse(bspAsset.buffer);
             bspGeoData   = parser.parseWorldGeometry(bspAsset.buffer);
-            if (bspTextures) {
+            if (BSPParser.DEBUG && bspTextures) {
               const sample = bspTextures.map((m, i) =>
                 `[${i}] splat=${m?.ltmapTex ?? 'null'} c0=${m?.c0 ?? '-'} c1=${m?.c1 ?? '-'} c2=${m?.c2 ?? '-'} c3=${m?.c3 ?? '-'}`
               ).join('\n');
@@ -570,7 +655,9 @@ export async function loadMap(abinFile) {
 
         let sceneObj;
         if (isMapTerrain && bspGeoData && bspTextures?.length) {
-          console.log(`[BSP render] ${model.name}: ${bspGeoData.vertices.length/3} verts, ${bspGeoData.matGroups.size} groups, ${bspTextures.length} mats, uvSets=${bspGeoData.uvSets.length}`);
+          if (BSPParser.DEBUG) {
+            console.log(`[BSP render] ${model.name}: ${bspGeoData.vertices.length/3} verts, ${bspGeoData.matGroups.size} groups, ${bspTextures.length} mats, uvSets=${bspGeoData.uvSets.length}`);
+          }
           sceneObj = await buildBSPMesh(
             bspGeoData,
             bspTextures,

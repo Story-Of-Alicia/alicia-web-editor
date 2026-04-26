@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { DDSLoader } from 'three/addons/loaders/DDSLoader.js';
-import { BASE, ddsLoader, texCache, state, DEBUG_MAP_RESOLVE, DEBUG_MAP_RESOLVE_FILTER } from './viewerState.js';
+import { BASE, ddsLoader, texCache, maxAniso, state, DEBUG_MAP_RESOLVE, DEBUG_MAP_RESOLVE_FILTER } from './viewerState.js';
 
 // ─── PAK texture index (populated when browsing a PAK file) ─────────────────
 // Maps lowercased texture name (without ext) -> full PAK path
@@ -145,7 +145,9 @@ export async function loadTexture(texDir, name, colorSpace = THREE.SRGBColorSpac
           URL.revokeObjectURL(url);
         }
         tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+        tex.anisotropy = maxAniso;
         tex.colorSpace = colorSpace;
+        tex.userData.texName = name.toLowerCase();
         return tex;
       })().catch(() => null));
     }
@@ -165,7 +167,7 @@ export async function loadTexture(texDir, name, colorSpace = THREE.SRGBColorSpac
       texCache.set(key, (ext === '.dds'
         ? new Promise((ok, fail) => ddsLoader.load(url, ok, undefined, fail))
         : new Promise((ok, fail) => new THREE.TextureLoader().load(url, ok, undefined, fail))
-      ).then(tex => { tex.wrapS = tex.wrapT = THREE.RepeatWrapping; tex.colorSpace = colorSpace; return tex; })
+      ).then(tex => { tex.wrapS = tex.wrapT = THREE.RepeatWrapping; tex.anisotropy = maxAniso; tex.colorSpace = colorSpace; tex.userData.texName = name.toLowerCase(); return tex; })
        .catch(() => null));
     }
     return texCache.get(key);
@@ -182,7 +184,9 @@ export async function loadTexture(texDir, name, colorSpace = THREE.SRGBColorSpac
           : new Promise((ok, fail) => new THREE.TextureLoader().load(url, ok, undefined, fail))
         ).then(tex => {
           tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+          tex.anisotropy = maxAniso;
           tex.colorSpace = colorSpace;
+          tex.userData.texName = name.toLowerCase();
           return tex;
         }).catch(() => null));
       }
@@ -251,10 +255,13 @@ export async function loadTextureSet(texDir, texName) {
   const stem = normalizeTextureStem(texName);
   if (!stem) return {};
   const { diffuse, specular, sss } = deriveTextureNames(stem);
-  const [map, specMap, sssMap] = await Promise.all([
-    loadTexture(texDir, diffuse, THREE.SRGBColorSpace),
+  // Some DFFs store bare texture names without _dif suffix (e.g. "h000_macho" not "h000_macho_dif").
+  // Try the derived _dif name first; fall back to the bare stem if it returns null.
+  const mapDiff = await loadTexture(texDir, diffuse, THREE.SRGBColorSpace)
+    ?? (diffuse !== stem ? await loadTexture(texDir, stem, THREE.SRGBColorSpace) : null);
+  const [specMap, sssMap] = await Promise.all([
     loadTexture(texDir, specular, THREE.LinearSRGBColorSpace),
     loadTexture(texDir, sss, THREE.LinearSRGBColorSpace),
   ]);
-  return { map, specMap, sssMap };
+  return { map: mapDiff, specMap, sssMap };
 }

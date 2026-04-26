@@ -2,16 +2,28 @@ import * as THREE from 'three';
 import { DFFParser } from './DFFParser.js';
 import { ANMParser } from './ANMParser.js';
 import { BSPParser  } from './BSPParser.js';
-import { BASE, scene, camera, controls, state, ui, setStatus } from './viewerState.js';
+import { ABinParser } from './ABinParser.js';
+import { BASE, scene, camera, controls, ui, setStatus, ddsLoader } from './viewerState.js';
 
 // ─── Asset browser state ─────────────────────────────────────────────────────
 let assetTreeInitialised = false;
 let assetPreviewGroup    = null;
 let activeAssetEl        = null;
-let activeFileEl         = null;
 export let assetSelectionToken  = 0;
 const assetBufferCache   = new Map();
 const assetInfoCache     = new Map();
+const detailObjectUrls   = new Set();
+const previewObjectUrls  = new Set();
+
+const IMAGE_EXTS = new Set(['png', 'jpg', 'jpeg', 'webp', 'bmp', 'gif']);
+const TEXT_EXTS = new Set([
+  'txt', 'json', 'xml', 'ini', 'cfg', 'conf', 'lua', 'list', 'md', 'log',
+  'csv', 'yaml', 'yml', 'js', 'ts', 'glsl', 'vert', 'frag', 'shader',
+  'material', 'bat', 'cmd', 'ps1', 'html', 'css',
+]);
+const RW_TREE_EXTS = new Set(['dff', 'bsp', 'anm', 'abin']);
+const TEXT_PREVIEW_MAX_BYTES = 256 * 1024;
+const textDecoder = new TextDecoder('utf-8', { fatal: false });
 
 export function bumpSelectionToken() { return ++assetSelectionToken; }
 
@@ -23,10 +35,46 @@ export function initAssetTree() {
   buildDirNodeAsset(ui.assetTree, 'graphics', 0, true);
 }
 
+function releaseObjectUrls(set) {
+  for (const url of set) URL.revokeObjectURL(url);
+  set.clear();
+}
+
+function rememberDetailObjectUrl(url) {
+  detailObjectUrls.add(url);
+  return url;
+}
+
+function rememberPreviewObjectUrl(url) {
+  previewObjectUrls.add(url);
+  return url;
+}
+
+function clearDetailMedia() {
+  releaseObjectUrls(detailObjectUrls);
+}
+
+function disposePreviewGroup(group) {
+  if (!group?.userData?.disposeOnClear) return;
+  group.traverse((node) => {
+    if (!node?.isMesh) return;
+    if (node.geometry?.dispose) node.geometry.dispose();
+    const materials = Array.isArray(node.material) ? node.material : [node.material];
+    for (const material of materials) {
+      if (!material) continue;
+      if (material.map?.dispose) material.map.dispose();
+      if (material.dispose) material.dispose();
+    }
+  });
+}
+
 export function clearAssetPreview() {
-  if (!assetPreviewGroup) return;
-  scene.remove(assetPreviewGroup);
-  assetPreviewGroup = null;
+  if (assetPreviewGroup) {
+    disposePreviewGroup(assetPreviewGroup);
+    scene.remove(assetPreviewGroup);
+    assetPreviewGroup = null;
+  }
+  releaseObjectUrls(previewObjectUrls);
 }
 
 function clearChildren(el) {
@@ -93,12 +141,14 @@ function createCodeBlock(title, lines) {
 }
 
 export function renderAssetDetail(blocks) {
+  clearDetailMedia();
   clearChildren(ui.assetDetail);
   blocks.filter(Boolean).forEach(block => ui.assetDetail.append(block));
   ui.assetDetail.scrollTop = 0;
 }
 
 export function resetAssetDetail(message = 'Select a file or chunk to inspect it here.') {
+  clearDetailMedia();
   clearChildren(ui.assetDetail);
   ui.assetDetail.append(createTextElement('p', 'asset-empty', message));
 }
@@ -157,6 +207,91 @@ function formatVersion(version) {
 function formatRange(start, endExclusive) {
   if (endExclusive <= start) return `0x${start.toString(16).toUpperCase()}`;
   return `0x${start.toString(16).toUpperCase()} - 0x${(endExclusive - 1).toString(16).toUpperCase()}`;
+}
+
+function mimeTypeForImageExt(ext) {
+  if (ext === 'png') return 'image/png';
+  if (ext === 'jpg' || ext === 'jpeg') return 'image/jpeg';
+  if (ext === 'webp') return 'image/webp';
+  if (ext === 'gif') return 'image/gif';
+  if (ext === 'bmp') return 'image/bmp';
+  return 'application/octet-stream';
+}
+
+function looksLikeText(bytes, sampleSize = 4096) {
+  const sampleLen = Math.min(sampleSize, bytes.length);
+  if (!sampleLen) return false;
+
+  let printable = 0;
+  let suspicious = 0;
+  for (let i = 0; i < sampleLen; i++) {
+    const value = bytes[i];
+    if (value === 0) return false;
+    if (value === 9 || value === 10 || value === 13 || (value >= 32 && value <= 126)) {
+      printable++;
+      continue;
+    }
+    if (value >= 0x20) {
+      printable++;
+      continue;
+    }
+    suspicious++;
+  }
+
+  if (!printable) return false;
+  const ratio = printable / sampleLen;
+  return ratio >= 0.85 && suspicious <= sampleLen * 0.1;
+}
+
+function decodeTextSnippet(bytes, maxBytes = TEXT_PREVIEW_MAX_BYTES) {
+  const textBytes = bytes.subarray(0, Math.min(bytes.length, maxBytes));
+  const decoded = textDecoder.decode(textBytes);
+  const normalised = decoded.replace(/\u0000/g, '').trim();
+  if (!normalised) return { text: '', truncated: false, lineCount: 0 };
+  const lines = normalised.split(/\r?\n/);
+  const previewLines = lines.slice(0, 60);
+  const truncated = bytes.length > maxBytes || lines.length > previewLines.length;
+  return {
+    text: previewLines.join('\n'),
+    truncated,
+    lineCount: lines.length,
+  };
+}
+
+function createImagePreviewBlock(info) {
+  if (!(info.buffer instanceof ArrayBuffer)) return null;
+  const blob = new Blob([info.buffer], { type: mimeTypeForImageExt(info.ext) });
+  const url = rememberDetailObjectUrl(URL.createObjectURL(blob));
+
+  const wrap = document.createElement('div');
+  wrap.className = 'asset-media-wrap';
+
+  const img = document.createElement('img');
+  img.className = 'asset-media-preview';
+  img.alt = info.filename;
+  img.loading = 'lazy';
+  img.src = url;
+  wrap.append(img);
+
+  return createDetailBlock('Preview', [wrap]);
+}
+
+export function getAssetExt(filename) {
+  const value = String(filename ?? '');
+  const dot = value.lastIndexOf('.');
+  return dot >= 0 ? value.substring(dot + 1).toLowerCase() : '';
+}
+
+export function getAssetIconLabel(ext) {
+  const value = String(ext ?? '').toLowerCase();
+  if (!value) return 'BIN';
+  if (value === 'jpeg') return 'JPG';
+  if (value.length <= 4) return value.toUpperCase();
+  return value.slice(0, 3).toUpperCase();
+}
+
+export function canExpandAssetTree(ext) {
+  return RW_TREE_EXTS.has(String(ext ?? '').toLowerCase());
 }
 
 // ─── Asset buffer / info caches ───────────────────────────────────────────────
@@ -310,13 +445,13 @@ function hexPreview(bytes, limit = 64) {
 // ─── Asset inspection ─────────────────────────────────────────────────────────
 
 export function inspectAssetBuffer(buffer, path, filename, url) {
-  const ext = filename.split('.').pop().toLowerCase();
+  const ext = getAssetExt(filename);
   const stem = filename.replace(/\.[^.]+$/, '');
   const bytes = new Uint8Array(buffer);
   const dv = new DataView(buffer);
-  const topChunks = parseRWChunks(dv, 0, dv.byteLength);
+  const topChunks = RW_TREE_EXTS.has(ext) ? parseRWChunks(dv, 0, dv.byteLength) : [];
   const chunkStats = new Map();
-  collectChunkStats(dv, topChunks, chunkStats);
+  if (topChunks.length) collectChunkStats(dv, topChunks, chunkStats);
 
   const info = {
     url,
@@ -324,6 +459,7 @@ export function inspectAssetBuffer(buffer, path, filename, url) {
     filename,
     stem,
     ext,
+    buffer,
     size: buffer.byteLength,
     topChunks,
     chunkStats: summariseChunkStats(chunkStats),
@@ -405,9 +541,49 @@ export function inspectAssetBuffer(buffer, path, filename, url) {
       };
 
       if (!palette) info.parseError = 'No terrain palette was found in this BSP file.';
+    } else if (ext === 'abin') {
+      const abinData = new ABinParser().parse(buffer);
+      const modelNames = (abinData.models ?? []).map(model => model?.name).filter(Boolean).slice(0, 18);
+      const cameraNames = (abinData.cameras ?? []).map(camera => camera?.name).filter(Boolean).slice(0, 8);
+      const nodeNames = (abinData.nodes ?? []).map(node => node?.name).filter(Boolean).slice(0, 12);
+
+      info.parsed = {
+        kind: 'abin',
+        abinData,
+        modelNames,
+        cameraNames,
+        nodeNames,
+      };
+    } else if (ext === 'dds') {
+      const ddsData = ddsLoader.parse(buffer);
+      info.parsed = {
+        kind: 'dds',
+        ddsData,
+        width: ddsData.width,
+        height: ddsData.height,
+        mipmaps: Array.isArray(ddsData.mipmaps) ? ddsData.mipmaps.length : 0,
+        format: ddsData.format,
+      };
+    } else if (IMAGE_EXTS.has(ext)) {
+      info.parsed = {
+        kind: 'image',
+        mime: mimeTypeForImageExt(ext),
+      };
+    } else if (TEXT_EXTS.has(ext) || looksLikeText(bytes)) {
+      const decoded = decodeTextSnippet(bytes);
+      info.parsed = {
+        kind: 'text',
+        preview: decoded.text,
+        lineCount: decoded.lineCount,
+        truncated: decoded.truncated,
+      };
     }
   } catch (error) {
     info.parseError = error.message;
+  }
+
+  if (!info.parsed) {
+    info.parsed = { kind: 'binary' };
   }
 
   return info;
@@ -418,7 +594,7 @@ export function buildFileDetailBlocks(info) {
 
   blocks.push(createKeyValueBlock('Overview', [
     ['Name', info.filename],
-    ['Type', info.ext.toUpperCase()],
+    ['Type', info.ext ? info.ext.toUpperCase() : 'BIN'],
     ['Path', info.path],
     ['Size', formatByteSize(info.size)],
   ]));
@@ -459,16 +635,55 @@ export function buildFileDetailBlocks(info) {
       ['Palette slots', parsed.paletteEntries.length.toLocaleString()],
     ]));
     blocks.push(createListBlock('Terrain Palette', parsed.paletteEntries));
+  } else if (info.parsed?.kind === 'abin') {
+    const parsed = info.parsed;
+    blocks.push(createKeyValueBlock('ABIN Summary', [
+      ['Version', parsed.abinData.version],
+      ['Models', (parsed.abinData.models?.length ?? 0).toLocaleString()],
+      ['Cameras', (parsed.abinData.cameras?.length ?? 0).toLocaleString()],
+      ['Nodes', (parsed.abinData.nodes?.length ?? 0).toLocaleString()],
+    ]));
+    blocks.push(createListBlock('Models', parsed.modelNames));
+    blocks.push(createListBlock('Cameras', parsed.cameraNames));
+    blocks.push(createListBlock('Nodes', parsed.nodeNames));
+  } else if (info.parsed?.kind === 'image') {
+    blocks.push(createImagePreviewBlock(info));
+  } else if (info.parsed?.kind === 'dds') {
+    const parsed = info.parsed;
+    blocks.push(createKeyValueBlock('DDS Summary', [
+      ['Width', parsed.width],
+      ['Height', parsed.height],
+      ['Mipmaps', parsed.mipmaps],
+      ['Format', parsed.format],
+    ]));
+    blocks.push(createDetailBlock('Preview', [
+      createTextElement('p', 'asset-empty', 'Displayed in viewport as a texture quad.'),
+    ]));
+  } else if (info.parsed?.kind === 'text') {
+    const parsed = info.parsed;
+    blocks.push(createKeyValueBlock('Text Summary', [
+      ['Lines', parsed.lineCount.toLocaleString()],
+      ['Preview bytes', formatByteSize(Math.min(info.size, TEXT_PREVIEW_MAX_BYTES))],
+      ['Truncated', parsed.truncated ? 'Yes' : 'No'],
+    ]));
+    blocks.push(createCodeBlock('Text Preview', parsed.preview));
+  } else if (info.parsed?.kind === 'binary') {
+    blocks.push(createDetailBlock('Binary Preview', [
+      createTextElement('p', 'asset-empty', 'No structured parser for this format yet.'),
+    ]));
   }
 
-  blocks.push(createListBlock(
-    'Top-Level Chunks',
-    info.topChunks.slice(0, 10).map(chunk => `${rwChunkLabel(chunk.type)} - ${formatByteSize(chunk.size)}`)
-  ));
-  blocks.push(createChipBlock(
-    'Chunk Mix',
-    info.chunkStats.map(chunk => `${chunk.label} x${chunk.count}`)
-  ));
+  if (info.topChunks.length) {
+    blocks.push(createListBlock(
+      'Top-Level Chunks',
+      info.topChunks.slice(0, 10).map(chunk => `${rwChunkLabel(chunk.type)} - ${formatByteSize(chunk.size)}`)
+    ));
+    blocks.push(createChipBlock(
+      'Chunk Mix',
+      info.chunkStats.map(chunk => `${chunk.label} x${chunk.count}`)
+    ));
+  }
+
   blocks.push(createListBlock('Embedded Strings', info.strings));
   blocks.push(createCodeBlock('Header Numbers', info.headerWords));
 
@@ -571,7 +786,7 @@ async function fetchDirListing(path) {
   for (const e of entries) {
     const dec = decodeURIComponent(e);
     if (e.endsWith('/')) dirs.push({ name: dec.slice(0, -1), raw: e.slice(0, -1) });
-    else if (/\.(dff|bsp|anm)$/i.test(dec)) files.push({ name: dec, raw: e });
+    else files.push({ name: dec, raw: e });
   }
   dirs.sort((a, b) => a.name.localeCompare(b.name));
   files.sort((a, b) => a.name.localeCompare(b.name));
@@ -701,12 +916,13 @@ export function buildRWChunkNodeAsset(parent, dv, chunk, depth, context = { path
 }
 
 function buildFileNodeAsset(parent, path, filename, depth) {
-  const ext = filename.split('.').pop().toLowerCase();
+  const ext = getAssetExt(filename);
+  const canExpand = canExpandAssetTree(ext);
   const { row, tog, ico, lbl } = makeRow(
     'tree-file',
     depth,
-    '>',
-    ext === 'dff' ? 'DFF' : ext === 'bsp' ? 'BSP' : 'ANM',
+    canExpand ? '>' : '',
+    getAssetIconLabel(ext),
     filename,
     path
   );
@@ -722,14 +938,8 @@ function buildFileNodeAsset(parent, path, filename, depth) {
       if (token !== assetSelectionToken) return;
 
       renderAssetDetail(buildFileDetailBlocks(info));
-
-      if (ext === 'dff') {
-        await previewAssetInfo(info, token);
-        if (token !== assetSelectionToken) return;
-      } else {
-        clearAssetPreview();
-        setStatus(`Selected ${filename}`);
-      }
+      await previewAssetInfo(info, token);
+      if (token !== assetSelectionToken) return;
     } catch (error) {
       if (token !== assetSelectionToken) return;
       clearAssetPreview();
@@ -746,6 +956,17 @@ function buildFileNodeAsset(parent, path, filename, depth) {
     });
   });
 
+  row.addEventListener('click', async (event) => {
+    if (canExpand && event.target === tog) return;
+    await selectFile();
+    if (canExpand && event.target === row) tog.click();
+  });
+
+  if (!canExpand) {
+    parent.append(row);
+    return;
+  }
+
   const children = document.createElement('div');
   children.className = 'tree-children';
   let loaded = false;
@@ -759,12 +980,6 @@ function buildFileNodeAsset(parent, path, filename, depth) {
     }
     const open = children.classList.toggle('open');
     tog.textContent = open ? 'v' : '>';
-  });
-
-  row.addEventListener('click', async (event) => {
-    if (event.target === tog) return;
-    await selectFile();
-    if (event.target === row) tog.click();
   });
 
   parent.append(row, children);
@@ -793,14 +1008,82 @@ async function loadRWChunkTreeAsset(parent, url, depth, context) {
 
 // ─── DFF preview ──────────────────────────────────────────────────────────────
 
-export async function previewAssetInfo(info, token = assetSelectionToken) {
+function focusPreviewGroup(group) {
+  const box = new THREE.Box3().setFromObject(group);
+  const size = Math.max(box.getSize(new THREE.Vector3()).length(), 0.25);
+  const center = box.getCenter(new THREE.Vector3());
+  controls.target.copy(center);
+  camera.position.copy(center)
+    .addScaledVector(new THREE.Vector3(1, 0.6, 1).normalize(), size * 1.5);
+  controls.update();
+}
+
+function createTexturePreviewGroup(texture, width = 1, height = 1) {
+  const safeWidth = Number.isFinite(width) && width > 0 ? width : 1;
+  const safeHeight = Number.isFinite(height) && height > 0 ? height : 1;
+  const maxSide = 2.2;
+  const scale = maxSide / Math.max(safeWidth, safeHeight);
+  const planeWidth = Math.max(0.25, safeWidth * scale);
+  const planeHeight = Math.max(0.25, safeHeight * scale);
+
+  const group = new THREE.Group();
+  group.userData.disposeOnClear = true;
+
+  const backdrop = new THREE.Mesh(
+    new THREE.PlaneGeometry(planeWidth * 1.04, planeHeight * 1.04),
+    new THREE.MeshBasicMaterial({ color: 0x1f2236, side: THREE.DoubleSide })
+  );
+  backdrop.position.z = -0.002;
+
+  const plane = new THREE.Mesh(
+    new THREE.PlaneGeometry(planeWidth, planeHeight),
+    new THREE.MeshBasicMaterial({ map: texture, transparent: true, side: THREE.DoubleSide })
+  );
+
+  group.add(backdrop);
+  group.add(plane);
+  return group;
+}
+
+async function buildImagePreviewGroup(info) {
+  const blob = new Blob([info.buffer], { type: mimeTypeForImageExt(info.ext) });
+  const objectUrl = rememberPreviewObjectUrl(URL.createObjectURL(blob));
+
+  const texture = await new Promise((resolve, reject) => {
+    const loader = new THREE.TextureLoader();
+    loader.load(objectUrl, resolve, undefined, reject);
+  });
+  texture.colorSpace = THREE.SRGBColorSpace;
+  texture.needsUpdate = true;
+
+  const image = texture.image;
+  const width = image?.naturalWidth ?? image?.width ?? 1;
+  const height = image?.naturalHeight ?? image?.height ?? 1;
+  return { group: createTexturePreviewGroup(texture, width, height), width, height };
+}
+
+function buildDdsPreviewGroup(info) {
+  const parsed = info.parsed?.ddsData ?? ddsLoader.parse(info.buffer);
+  const texture = new THREE.CompressedTexture(
+    parsed.mipmaps,
+    parsed.width,
+    parsed.height,
+    parsed.format
+  );
+  texture.colorSpace = THREE.SRGBColorSpace;
+  texture.needsUpdate = true;
+  return {
+    group: createTexturePreviewGroup(texture, parsed.width, parsed.height),
+    width: parsed.width,
+    height: parsed.height,
+  };
+}
+
+async function previewDffAsset(info, token) {
   const dffData = info?.parsed?.dffData;
-  if (!dffData) return;
+  if (!dffData) return false;
 
-  setStatus(`Loading ${info.stem}...`);
-  clearAssetPreview();
-
-  // Lazy import to break circular dependency
+  // Lazy import to break circular dependency.
   const { buildMesh } = await import('./characterViewer.js');
 
   const group = new THREE.Group();
@@ -812,23 +1095,65 @@ export async function previewAssetInfo(info, token = assetSelectionToken) {
     if (mesh) group.add(mesh);
   }
 
-  if (token !== assetSelectionToken) return;
-
-  if (!group.children.length) {
-    setStatus(`${info.stem}: no renderable geometry`);
-    return;
-  }
+  if (token !== assetSelectionToken) return true;
+  if (!group.children.length) return false;
 
   scene.add(group);
   assetPreviewGroup = group;
-  const box = new THREE.Box3().setFromObject(group);
-  const size = box.getSize(new THREE.Vector3()).length();
-  const center = box.getCenter(new THREE.Vector3());
-  controls.target.copy(center);
-  camera.position.copy(center)
-    .addScaledVector(new THREE.Vector3(1, 0.6, 1).normalize(), size * 1.5);
-  controls.update();
+  focusPreviewGroup(group);
   setStatus(`${info.stem} - ${dffData.geometries.length} geo, ${dffData.atomics.length} atomic(s)`);
+  return true;
+}
+
+async function previewTextureAsset(info, token) {
+  let preview;
+  if (info.parsed?.kind === 'dds') {
+    preview = buildDdsPreviewGroup(info);
+  } else {
+    preview = await buildImagePreviewGroup(info);
+  }
+
+  if (token !== assetSelectionToken) {
+    disposePreviewGroup(preview.group);
+    releaseObjectUrls(previewObjectUrls);
+    return true;
+  }
+
+  scene.add(preview.group);
+  assetPreviewGroup = preview.group;
+  focusPreviewGroup(preview.group);
+  setStatus(`${info.filename} - ${preview.width}x${preview.height}`);
+  return true;
+}
+
+export async function previewAssetInfo(info, token = assetSelectionToken) {
+  if (!info?.parsed) return;
+  clearAssetPreview();
+
+  try {
+    if (info.parsed.kind === 'dff') {
+      setStatus(`Loading ${info.stem}...`);
+      const rendered = await previewDffAsset(info, token);
+      if (!rendered && token === assetSelectionToken) {
+        setStatus(`${info.stem}: no renderable geometry`);
+      }
+      return;
+    }
+
+    if (info.parsed.kind === 'image' || info.parsed.kind === 'dds') {
+      setStatus(`Loading texture preview: ${info.filename}...`);
+      await previewTextureAsset(info, token);
+      return;
+    }
+
+    if (token === assetSelectionToken) {
+      setStatus(`Selected ${info.filename}`);
+    }
+  } catch (error) {
+    if (token !== assetSelectionToken) return;
+    clearAssetPreview();
+    setStatus(`Preview failed: ${error.message}`, true);
+  }
 }
 
 // ─── Search ───────────────────────────────────────────────────────────────────

@@ -1,5 +1,7 @@
-import { BASE, ABIN_DIR, canvas, renderer, scene, camera, controls, clock, state, ui, setStatus, buildPakAssetIndex, initUserLight, updateUserLight } from './viewerState.js';
+import { BASE, ABIN_DIR, canvas, renderer, scene, camera, controls, clock, state, ui, setStatus, fetchBinary, buildPakAssetIndex, applyCharCfg, applyMountCfg, initUserLight, updateUserLight } from './viewerState.js';
+import { parseLibconfig, parseMounts } from './LibconfigParser.js';
 import { loadCharacter, buildSlotUI, clearScene, hasActiveAnimationPose, syncBoneLinks, syncAttachmentGroup, syncAttachmentGroupPosition } from './characterViewer.js';
+import { loadHorse, buildHorseSlotUI } from './horseViewer.js';
 import { loadMap, clearMap } from './mapViewer.js';
 import { initAssetTree, clearAssetPreview, bumpSelectionToken, initSearch } from './assetBrowser.js';
 import { PakConnection } from './pakConnection.js';
@@ -10,16 +12,21 @@ import { setPakTextureSource, clearPakTextureSource, resetBgIndex } from './text
 function setMode(mode) {
   state.mapMode = mode === 'map';
   const isAssets = mode === 'assets';
-  ui.tabChar.classList.toggle('active', mode === 'char');
-  ui.tabMap.classList.toggle('active', mode === 'map');
+  const isAnim   = mode === 'char' || mode === 'horse';
+  ui.tabChar.classList.toggle('active',  mode === 'char');
+  ui.tabHorse.classList.toggle('active', mode === 'horse');
+  ui.tabMap.classList.toggle('active',   mode === 'map');
   ui.tabAssets.classList.toggle('active', isAssets);
-  ui.charToolbar.style.display   = mode === 'char'   ? '' : 'none';
-  ui.mapToolbar.style.display    = mode === 'map'    ? '' : 'none';
-  ui.assetsToolbar.style.display = isAssets          ? '' : 'none';
-  ui.charSidebar.style.display   = mode === 'char'   ? '' : 'none';
-  ui.mapSidebar.style.display    = mode === 'map'    ? '' : 'none';
-  ui.assetsSidebar.style.display = isAssets          ? '' : 'none';
-  ui.controlsEl.style.display    = mode === 'char'   ? 'flex' : 'none';
+  ui.charToolbar.style.display   = mode === 'char'  ? '' : 'none';
+  ui.horseToolbar.style.display  = mode === 'horse' ? '' : 'none';
+  ui.mapToolbar.style.display    = mode === 'map'   ? '' : 'none';
+  ui.assetsToolbar.style.display = isAssets         ? '' : 'none';
+  ui.charSidebar.style.display   = mode === 'char'  ? '' : 'none';
+  ui.horseSidebar.style.display  = mode === 'horse' ? '' : 'none';
+  ui.mapSidebar.style.display    = mode === 'map'   ? '' : 'none';
+  ui.assetsSidebar.style.display = isAssets         ? '' : 'none';
+  ui.animPanel.style.display     = isAnim           ? '' : 'none';
+  ui.controlsEl.style.display    = isAnim           ? 'flex' : 'none';
   if (!isAssets) {
     bumpSelectionToken();
     clearAssetPreview();
@@ -62,8 +69,28 @@ ui.timeline.addEventListener('input', () => {
 });
 
 ui.tabChar.addEventListener('click',   () => { setMode('char');   clearMap(); switchChar(ui.charSelect.value); });
+ui.tabHorse.addEventListener('click',  () => { setMode('horse');  clearMap(); switchHorse(ui.horseSelect.value); });
 ui.tabMap.addEventListener('click',    () => { setMode('map');    clearScene(); if (ui.mapSelect.value) loadMap(ui.mapSelect.value); });
 ui.tabAssets.addEventListener('click', () => { setMode('assets'); clearScene(); clearMap(); if (!state.pakConnection) initAssetTree(); });
+
+ui.horseSelect.addEventListener('change', () => switchHorse(ui.horseSelect.value));
+
+async function switchHorse(horse) {
+  state.mountName = horse;
+  const data = state.mountsData?.[horse];
+  if (!data) return;
+  buildHorseSlotUI(data);
+  await loadHorse(horse);
+}
+
+function populateHorseSelect(mountsData) {
+  ui.horseSelect.innerHTML = '';
+  for (const horse of Object.keys(mountsData)) {
+    const opt = document.createElement('option');
+    opt.value = horse; opt.textContent = horse;
+    ui.horseSelect.appendChild(opt);
+  }
+}
 
 ui.mapSelect.addEventListener('change', () => { if (ui.mapSelect.value) loadMap(ui.mapSelect.value); });
 
@@ -80,18 +107,24 @@ ui.btnMapNodes.addEventListener('click', () => {
   ui.btnMapNodes.classList.toggle('active', state.mapShowNodes);
 });
 
-ui.btnBones.addEventListener('click', () => {
+function toggleBones() {
   state.showBones = !state.showBones;
   if (state.skeletonHelper) state.skeletonHelper.visible = state.showBones;
   ui.btnBones.classList.toggle('active', state.showBones);
-});
-ui.btnWire.addEventListener('click', () => {
+  ui.btnHorseBones.classList.toggle('active', state.showBones);
+}
+function toggleWire() {
   state.showWireframe = !state.showWireframe;
   state.sceneGroup?.traverse(obj => {
     if (obj.isMesh || obj.isSkinnedMesh) [obj.material].flat().forEach(m => { m.wireframe = state.showWireframe; });
   });
   ui.btnWire.classList.toggle('active', state.showWireframe);
-});
+  ui.btnHorseWire.classList.toggle('active', state.showWireframe);
+}
+ui.btnBones.addEventListener('click', toggleBones);
+ui.btnHorseBones.addEventListener('click', toggleBones);
+ui.btnWire.addEventListener('click', toggleWire);
+ui.btnHorseWire.addEventListener('click', toggleWire);
 
 [ui.lightX, ui.lightY, ui.lightZ, ui.lightInt].forEach(ctrl => {
   ctrl?.addEventListener('input', () => {
@@ -101,6 +134,8 @@ ui.btnWire.addEventListener('click', () => {
 });
 
 initSearch();
+setMode('assets');
+if (!state.pakConnection) initAssetTree();
 
 // ─── PAK connection ───────────────────────────────────────────────────────────
 const btnBrowsePak    = document.getElementById('btn-browse-pak');
@@ -241,7 +276,7 @@ function normaliseAssetPath(path) {
   return String(path ?? '').trim().replace(/\\/g, '/');
 }
 
-function refreshPakStateFromListing(pakConn, listing) {
+async function refreshPakStateFromListing(pakConn, listing) {
   const assets = extractPakAssets(listing);
   state.pakConnection = pakConn;
   state.pakResourcePath = listing?.resource_path ?? pakConn.resourcePath ?? '';
@@ -260,6 +295,20 @@ function refreshPakStateFromListing(pakConn, listing) {
 
   // Build the PAK tree in the asset browser.
   initPakTree({ ...listing, assets });
+
+  // Try to reload character config from the libconfig in this PAK.
+  try {
+    const { charCfg, partsData, mountCfg, mountsData } = await loadLibconfig();
+    applyCharCfg(charCfg);
+    applyMountCfg(mountCfg);
+    state.partsData  = partsData;
+    state.mountsData = mountsData;
+    populateCharSelect(partsData);
+    populateHorseSelect(mountsData);
+    console.log('[libconfig] reloaded from PAK:', Object.keys(partsData).length, 'chars,', Object.keys(mountsData).length, 'horses');
+  } catch (e) {
+    console.warn('[libconfig] not found in PAK, keeping existing char config:', e.message);
+  }
 }
 
 function upsertPakListingAsset(listingData, assetPath) {
@@ -294,7 +343,7 @@ btnBrowsePak.addEventListener('click', async () => {
     setStatus('Waiting for PAK file selection in the editor...');
     const listing = await pakConn.openPak();
 
-    refreshPakStateFromListing(pakConn, listing);
+    await refreshPakStateFromListing(pakConn, listing);
 
     btnBrowsePak.style.display = 'none';
     btnDisconnectPak.style.display = '';
@@ -352,7 +401,7 @@ btnAddAssetPak.addEventListener('click', async () => {
 
     // Avoid expensive pak.read() after each write; update local listing instead.
     const updatedAssets = upsertPakListingAsset(state.pakListing, assetPath);
-    refreshPakStateFromListing(state.pakConnection, {
+    await refreshPakStateFromListing(state.pakConnection, {
       resource_path: state.pakResourcePath ?? state.pakConnection.resourcePath ?? '',
       assets: updatedAssets,
     });
@@ -370,7 +419,13 @@ btnExportPak.addEventListener('click', async () => {
     return;
   }
 
-  const currentPath = String(state.pakResourcePath ?? state.pakConnection.resourcePath ?? '');
+  const sourcePakPath = String(state.pakResourcePath ?? state.pakConnection.resourcePath ?? '').trim();
+  if (!sourcePakPath) {
+    setStatus('Current PAK source path is missing. Re-open the PAK and try again.', true);
+    return;
+  }
+
+  const currentPath = sourcePakPath;
   const { dir: currentDir, file: currentFile } = splitPath(currentPath);
   const suggestedName = buildEditedFileName(currentFile);
   const targetInput = window.prompt(
@@ -400,7 +455,7 @@ btnExportPak.addEventListener('click', async () => {
   try {
     btnExportPak.disabled = true;
     setStatus('Writing modified PAK to disk...');
-    await state.pakConnection.writePak(undefined, targetPath);
+    await state.pakConnection.writePak(sourcePakPath, targetPath);
     setStatus(`PAK written${targetPath ? `: ${targetPath}` : '.'}`);
   } catch (err) {
     setStatus(`PAK write error: ${err.message}`, true);
@@ -467,31 +522,72 @@ btnDisconnectPak.addEventListener('click', async () => {
   renderer.render(scene, camera);
 })();
 
-// ─── Init: load char_parts.json then build UI ─────────────────────────────────
+// ─── Libconfig loading ────────────────────────────────────────────────────────
+const LIBCONFIG_PATH = `${BASE}/other/ini/libconfig_c.dat`;
+
+async function loadLibconfig() {
+  const buf  = await fetchBinary(LIBCONFIG_PATH);
+  const text = new TextDecoder('utf-8').decode(buf);
+  const charResult  = parseLibconfig(text);
+  const mountResult = parseMounts(text);
+  return { ...charResult, ...mountResult };
+}
+
+function populateCharSelect(partsData) {
+  ui.charSelect.innerHTML = '';
+  for (const char of Object.keys(partsData)) {
+    const opt = document.createElement('option');
+    opt.value = char; opt.textContent = char;
+    ui.charSelect.appendChild(opt);
+  }
+}
+
+// ─── Init: load libconfig (or fall back to char_parts.json) then build UI ────
 (async () => {
   try {
-    state.partsData = await (await fetch('char_parts.json')).json();
+    const { charCfg, partsData, mountCfg, mountsData } = await loadLibconfig();
+    applyCharCfg(charCfg);
+    applyMountCfg(mountCfg);
+    state.partsData  = partsData;
+    state.mountsData = mountsData;
+    console.log('[libconfig] loaded', Object.keys(partsData).length, 'chars,', Object.keys(mountsData).length, 'horses');
 
-    for (const char of Object.keys(state.partsData)) {
-      const opt = document.createElement('option');
-      opt.value = char; opt.textContent = char;
-      ui.charSelect.appendChild(opt);
-    }
+    populateCharSelect(state.partsData);
     ui.charSelect.value = 'r00';
+    populateHorseSelect(state.mountsData);
+    ui.horseSelect.value = 'h000';
 
-    // Populate map select
+    // Populate map select — try HTTP directory listing first, fall back to known list.
+    const KNOWN_ABINS = [
+      'award.abin','bg_award02.abin','bg_award03.abin',
+      'li_tabi01.abin','li_tabi02.abin',
+      'ranch_00.abin','ranch_w.abin',
+      'readyroom01.abin','readyroom01_w.abin',
+      'ri_dorf02.abin','ri_dorf03.abin','ri_dorf04.abin',
+      'ri_fore01.abin','ri_fore02.abin','ri_fore03.abin','ri_fore04.abin',
+      'ri_land01.abin','ri_land02.abin','ri_land03.abin','ri_land04.abin',
+      'ri_land05.abin','ri_land06.abin','ri_land07.abin',
+      'ri_pgri01.abin',
+      'select_bg_tuto02.abin','set_waterfall.abin','stable.abin',
+      'title_w_scene_waterfall01.abin',
+      'tuto_01.abin','tuto_02.abin','tuto_03.abin',
+    ];
     try {
       const text  = await (await fetch(`${BASE}/${ABIN_DIR}/`)).text();
       const files = [...text.matchAll(/href="([^"]+\.abin)"/gi)].map(m => m[1]);
-      for (const f of files) {
+      const list  = files.length ? files : KNOWN_ABINS;
+      for (const f of list) {
         const opt = document.createElement('option');
         opt.value = f; opt.textContent = f.replace(/\.abin$/i, '');
         ui.mapSelect.appendChild(opt);
       }
-    } catch { /* no abin directory listing available */ }
-
-    // Default to assets tab.
-    setMode('assets');
+    } catch {
+      for (const f of KNOWN_ABINS) {
+        const opt = document.createElement('option');
+        opt.value = f; opt.textContent = f.replace(/\.abin$/i, '');
+        ui.mapSelect.appendChild(opt);
+      }
+    }
   } catch (e) {
     setStatus(`Init error: ${e.message}`, true);
     console.error(e);

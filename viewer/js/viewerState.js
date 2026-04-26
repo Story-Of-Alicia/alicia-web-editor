@@ -10,18 +10,33 @@ export const ABIN_DIR = `${MAP_BASE}/abin`;
 export const DEBUG_MAP_RESOLVE = false;
 export const DEBUG_MAP_RESOLVE_FILTER = '';
 
+// Populated at startup from libconfig_c.dat (or hardcoded fallback).
 export const CHAR_CFG = {
   r00: { texDir: `${PC}/r00/textures`, partsDir: `${PC}/r00_parts`, anmDir: `${PC}/r00/anm`, skelDff: `${PC}/r00/r00.dff` },
   r02: { texDir: `${PC}/r02/textures`, partsDir: `${PC}/r02_parts`, anmDir: `${PC}/r02/anm`, skelDff: `${PC}/r02/r02.dff` },
 };
+
+export function applyCharCfg(cfg) {
+  for (const key of Object.keys(CHAR_CFG)) delete CHAR_CFG[key];
+  Object.assign(CHAR_CFG, cfg);
+}
+
+export const VEH = 'graphics/vehicle';
+
+// Populated at startup from libconfig_c.dat.
+export const MOUNT_CFG = {};
+export function applyMountCfg(cfg) {
+  for (const key of Object.keys(MOUNT_CFG)) delete MOUNT_CFG[key];
+  Object.assign(MOUNT_CFG, cfg);
+}
 
 // ─── Three.js setup ───────────────────────────────────────────────────────────
 export const canvas   = document.getElementById('canvas');
 export const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
 renderer.setPixelRatio(window.devicePixelRatio);
 renderer.outputColorSpace = THREE.SRGBColorSpace;
-renderer.toneMapping = THREE.ACESFilmicToneMapping;
-renderer.toneMappingExposure = 1.25;
+renderer.toneMapping = THREE.ReinhardToneMapping;
+renderer.toneMappingExposure = 1.1;
 
 export const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x14172a);
@@ -38,6 +53,7 @@ controls.update();
 
 export const ddsLoader = new DDSLoader();
 export const texCache  = new Map();
+export const maxAniso  = renderer.capabilities.getMaxAnisotropy();
 export const clock     = new THREE.Clock();
 
 // ─── BSP terrain shader debug ─────────────────────────────────────────────────
@@ -73,8 +89,10 @@ window.addEventListener('keydown', (e) => {
 
 // ─── Mutable app state ────────────────────────────────────────────────────────
 export const state = {
-  charName:   'r00',
-  partsData:  null,
+  charName:    'r00',
+  partsData:   null,
+  mountName:   'h000',
+  mountsData:  null,  // all parsed horse slot data from libconfig
   activeParts:  {},
   sharedBones:  null,
   sharedFrames: null,
@@ -114,17 +132,25 @@ export const ui = {
   speedLabel:   document.getElementById('speed-label'),
   timeline:     document.getElementById('timeline'),
   timeLabel:    document.getElementById('time-label'),
-  btnBones:     document.getElementById('btn-bones'),
-  btnWire:      document.getElementById('btn-wire'),
+  btnBones:      document.getElementById('btn-bones'),
+  btnWire:       document.getElementById('btn-wire'),
+  btnHorseBones: document.getElementById('btn-horse-bones'),
+  btnHorseWire:  document.getElementById('btn-horse-wire'),
   statusEl:     document.getElementById('status'),
   slotsPanel:   document.getElementById('slots-panel'),
   tabChar:      document.getElementById('tab-char'),
+  tabHorse:     document.getElementById('tab-horse'),
   tabMap:       document.getElementById('tab-map'),
   tabAssets:    document.getElementById('tab-assets'),
   charToolbar:  document.getElementById('char-toolbar'),
   mapToolbar:   document.getElementById('map-toolbar'),
   assetsToolbar:document.getElementById('assets-toolbar'),
-  charSidebar:  document.getElementById('char-sidebar'),
+  charSidebar:   document.getElementById('char-sidebar'),
+  horseSidebar:  document.getElementById('horse-sidebar'),
+  horseSlotsPanel: document.getElementById('horse-slots-panel'),
+  horseSelect:   document.getElementById('horse-select'),
+  horseToolbar:  document.getElementById('horse-toolbar'),
+  animPanel:     document.getElementById('anim-panel'),
   mapSidebar:   document.getElementById('map-sidebar'),
   assetsSidebar:document.getElementById('assets-sidebar'),
   assetsSearch: document.getElementById('assets-search'),

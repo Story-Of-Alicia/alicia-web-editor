@@ -23,15 +23,16 @@
 
   <!-- Tab buttons -->
   <div class="tab-group">
-    <button class="tab-btn active" id="tab-char">Character</button>
+    <button class="tab-btn active" id="tab-assets">Assets</button>
+    <button class="tab-btn" id="tab-char">Character</button>
+    <button class="tab-btn" id="tab-horse">Horse</button>
     <button class="tab-btn" id="tab-map">Map</button>
-    <button class="tab-btn" id="tab-assets">Assets</button>
   </div>
 
   <div class="toolbar-sep"></div>
 
   <!-- Character-mode controls -->
-  <div id="char-toolbar">
+  <div id="char-toolbar" style="display:none">
     <label for="char-select">Char</label>
     <select id="char-select"></select>
     <button class="btn-icon" id="btn-bones">Bones</button>
@@ -39,12 +40,20 @@
   </div>
 
   <!-- Assets-mode controls -->
-  <div id="assets-toolbar" style="display:none">
+  <div id="assets-toolbar">
     <button class="btn-icon" id="btn-browse-pak">Browse PAK</button>
     <button class="btn-icon" id="btn-disconnect-pak" style="display:none">Disconnect</button>
     <button class="btn-icon" id="btn-add-asset-pak" style="display:none">Add/Replace Asset</button>
     <button class="btn-icon" id="btn-export-pak" style="display:none">Write PAK</button>
     <input type="text" id="assets-search" placeholder="Filter assets…" autocomplete="off">
+  </div>
+
+  <!-- Horse-mode controls -->
+  <div id="horse-toolbar" style="display:none">
+    <label for="horse-select">Horse</label>
+    <select id="horse-select"></select>
+    <button class="btn-icon" id="btn-horse-bones">Bones</button>
+    <button class="btn-icon" id="btn-horse-wire">Wire</button>
   </div>
 
   <!-- Map-mode controls -->
@@ -70,14 +79,18 @@
 <aside id="sidebar">
 
   <!-- Character sidebar -->
-  <div id="char-sidebar">
-    <div class="sidebar-section">
+  <div id="char-sidebar" style="display:none">
+    <div class="sidebar-section sidebar-parts">
       <h2>Parts</h2>
       <div id="slots-panel"></div>
     </div>
-    <div class="sidebar-section sidebar-anims">
-      <h2>Animations</h2>
-      <ul id="anim-list"></ul>
+  </div>
+
+  <!-- Horse sidebar -->
+  <div id="horse-sidebar" style="display:none">
+    <div class="sidebar-section sidebar-parts">
+      <h2>Parts</h2>
+      <div id="horse-slots-panel"></div>
     </div>
   </div>
 
@@ -90,7 +103,7 @@
   </div>
 
   <!-- Assets sidebar -->
-  <div id="assets-sidebar" style="display:none">
+  <div id="assets-sidebar">
     <div class="sidebar-section sidebar-anims asset-browser-section">
       <h2>Asset Browser</h2>
       <div id="asset-tree"></div>
@@ -108,6 +121,12 @@
 <!-- 3D Viewport -->
 <main id="viewport">
   <canvas id="canvas"></canvas>
+  <aside id="anim-panel" style="display:none">
+    <div class="sidebar-section sidebar-anims">
+      <h2>Animations</h2>
+      <ul id="anim-list"></ul>
+    </div>
+  </aside>
 </main>
 
 <!-- Controls bar -->

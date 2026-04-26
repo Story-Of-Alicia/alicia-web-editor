@@ -56,14 +56,35 @@ export class ANMParser {
       const px    = r.readFloat32();
       const py    = r.readFloat32();
       const pz    = r.readFloat32();
-      r.readInt32(); // prevFrame (used only for RW runtime; we use index math)
-      keyframes.push({ time, qx, qy, qz, qw, px, py, pz });
+      const prevFrame = r.readInt32();
+      keyframes.push({ time, qx, qy, qz, qw, px, py, pz, prevFrame });
     }
 
+    // Store raw prevFrame values for diagnostics.
+    const _rawPrevFrames = keyframes.slice(0, Math.min(6, keyframes.length)).map(k => k.prevFrame);
+
     // Infer numBones from caller or from the data itself.
-    // Look at how many keyframes share time=0 at the start.
     let detectedBones = numBones || 0;
     if (!detectedBones) {
+      // Primary: prevFrame as absolute byte offset — bone0's keyframe at t1 is at
+      // index numBones and has prevFrame == 0 (byte offset of bone0@t0).
+      for (let i = 1; i < keyframes.length; i++) {
+        if (keyframes[i].prevFrame === 0) { detectedBones = i; break; }
+      }
+    }
+    if (!detectedBones) {
+      // Try prevFrame as negative relative byte offset: bone0@t1 has prevFrame = -numBones*36.
+      // So numBones = -prevFrame[numBones] / 36.
+      for (let i = 1; i < keyframes.length; i++) {
+        const pf = keyframes[i].prevFrame;
+        if (pf < 0 && (-pf % 36) === 0) {
+          const candidate = -pf / 36;
+          if (candidate === i) { detectedBones = i; break; }
+        }
+      }
+    }
+    if (!detectedBones) {
+      // Fallback: count consecutive keyframes with time ≈ 0 (single-timestep ANMs).
       detectedBones = 1;
       for (let i = 1; i < keyframes.length; i++) {
         if (Math.abs(keyframes[i].time) < 1e-6) detectedBones++;
@@ -73,7 +94,7 @@ export class ANMParser {
 
     const numTimeSteps = Math.ceil(numKeyframes / detectedBones);
 
-    return { duration, numBones: detectedBones, numTimeSteps, numKeyframes, keyframes };
+    return { duration, numBones: detectedBones, numTimeSteps, numKeyframes, keyframes, _rawPrevFrames };
   }
 
   /**

@@ -2,14 +2,14 @@
 // Builds a tree from flat PAK asset paths and integrates with the existing
 // asset browser detail/preview pipeline.
 
-import * as THREE from 'three';
-import { scene, camera, controls, state, ui, setStatus } from './viewerState.js';
+import { ui, setStatus } from './viewerState.js';
 import {
   makeRow, makeExpandable, selectAssetRow,
   renderAssetDetail, resetAssetDetail,
   showAssetLoading, showAssetError,
   inspectAssetBuffer, buildFileDetailBlocks, previewAssetInfo,
   clearAssetPreview, assetSelectionToken, bumpSelectionToken,
+  getAssetExt, getAssetIconLabel, canExpandAssetTree,
 } from './assetBrowser.js';
 
 let pakConnection = null;
@@ -68,13 +68,6 @@ function buildTree(assets) {
     node.files.push({ ...entry, path, originalPath, filename });
   }
   return root;
-}
-
-const VIEWABLE_EXTS = new Set(['dff', 'bsp', 'anm', 'dds', 'png', 'abin']);
-
-function getExt(filename) {
-  const dot = filename.lastIndexOf('.');
-  return dot >= 0 ? filename.substring(dot + 1).toLowerCase() : '';
 }
 
 function formatSize(bytes) {
@@ -194,11 +187,12 @@ function buildPakAssetMetaBlock(file) {
 }
 
 function buildPakFileNode(parent, file, depth) {
-  const ext = getExt(file.filename);
-  const iconText = ext.toUpperCase().slice(0, 3) || 'BIN';
+  const ext = getAssetExt(file.filename);
+  const canExpand = canExpandAssetTree(ext);
+  const iconText = getAssetIconLabel(ext);
   const sizeStr = formatSize(file.size);
   const { row, tog, ico, lbl } = makeRow(
-    'tree-file', depth, VIEWABLE_EXTS.has(ext) ? '>' : '', iconText,
+    'tree-file', depth, canExpand ? '>' : '', iconText,
     `${file.filename}${sizeStr}`, file.path
   );
 
@@ -218,13 +212,7 @@ function buildPakFileNode(parent, file, depth) {
       const metaBlock = buildPakAssetMetaBlock(file);
       if (metaBlock) blocks.unshift(metaBlock);
       renderAssetDetail(blocks);
-
-      if (ext === 'dff') {
-        await previewAssetInfo(info, token);
-      } else {
-        clearAssetPreview();
-        setStatus(`Selected ${file.filename}`);
-      }
+      await previewAssetInfo(info, token);
     } catch (err) {
       if (token !== assetSelectionToken) return;
       clearAssetPreview();
@@ -242,8 +230,8 @@ function buildPakFileNode(parent, file, depth) {
     });
   });
 
-  // Click the toggle to expand RW chunks (for viewable files).
-  if (VIEWABLE_EXTS.has(ext) && ext !== 'dds' && ext !== 'png') {
+  // Click the toggle to expand RW chunk trees for supported RW formats.
+  if (canExpand) {
     const children = document.createElement('div');
     children.className = 'tree-children';
     let loaded = false;
@@ -260,6 +248,10 @@ function buildPakFileNode(parent, file, depth) {
           if (parseRWChunks && buildRWChunkNodeAsset) {
             const dv = new DataView(buffer);
             const chunks = parseRWChunks(dv, 0, buffer.byteLength);
+            if (!chunks.length) {
+              const { row: emptyRow } = makeRow('tree-file', depth + 1, '', '---', 'No RW chunks found');
+              children.append(emptyRow);
+            }
             for (const chunk of chunks) {
               buildRWChunkNodeAsset(children, dv, chunk, depth + 1, { path: file.path, filename: file.filename });
             }
@@ -278,7 +270,7 @@ function buildPakFileNode(parent, file, depth) {
   }
 
   row.addEventListener('click', async (e) => {
-    if (e.target === tog) return;
+    if (canExpand && e.target === tog) return;
     await selectFile();
   });
 }

@@ -124,6 +124,21 @@ export class DFFParser {
       const extChunk = extChunks[fi];
       if (extChunk.type !== RW.EXTENSION) continue;
 
+      // Detect format: physx DFFs store AliceData key-value pairs directly in the
+      // Extension payload (paramCount is a small integer like 1–5).  Standard DFFs
+      // wrap HAnim (0x011E) / FrameName (0x011F) sub-chunks whose type words are ≥ 256.
+      const savedPos = extChunk.reader.pos;
+      const firstWord = extChunk.reader.remaining >= 4
+        ? extChunk.reader.readUInt32() : -1;
+      extChunk.reader.pos = savedPos;
+
+      if (firstWord >= 1 && firstWord <= 32) {
+        // AliceData path — parse name from key-value pairs, skip sub-chunk loop
+        frames[fi].name = this._parseFrameNamePlugin(extChunk.reader) ?? frames[fi].name;
+        continue;
+      }
+
+      // Standard Extension sub-chunk path
       while (extChunk.reader.remaining >= 12) {
         const plugin = this._readChunk(extChunk.reader);
         if (!plugin) break;

@@ -6,6 +6,9 @@ import { BinaryReader } from './BinaryReader.js';
 // BSP material[i] corresponds to DFF terrain material[i].
 
 export class BSPParser {
+  // Set to true to enable verbose diagnostic logging.
+  static DEBUG = false;
+
   // Parse BSP world geometry into renderable data.
   // Returns { vertices(Float32Array), uvs(Float32Array), matGroups(Map<matIdx,[i0,i1,i2,…]>) }
   // or null if the geometry can't be read.
@@ -36,14 +39,16 @@ export class BSPParser {
     // numTexCoordSets: bits 16–23 (0 = use TEXCOORDS/TEXCOORDS2 flags)
     let numUVSets = (worldFormat >> 16) & 0xFF;
     if (numUVSets === 0) numUVSets = (worldFormat & 0x80) ? 2 : (worldFormat & 0x04) ? 1 : 0;
-    console.log(`[BSP fmt] 0x${worldFormat.toString(16).padStart(8,'0')} normals=${hasNormals} prelit=${hasPrelit} numUV=${numUVSets}`);
+    if (BSPParser.DEBUG) {
+      console.log(`[BSP fmt] 0x${worldFormat.toString(16).padStart(8,'0')} normals=${hasNormals} prelit=${hasPrelit} numUV=${numUVSets}`);
+    }
 
     // ── Collect ALL AtomicSections (BSP tree may have many leaf sectors) ────
     const worldEnd = Math.min(12 + worldSize, fileSize);
     const atomicSections = [];
     this._scanSectors(view, 12, worldEnd, fileSize, atomicSections);
     if (atomicSections.length === 0) return null;
-    console.log(`[BSP] ${atomicSections.length} sector(s)`);
+    if (BSPParser.DEBUG) console.log(`[BSP] ${atomicSections.length} sector(s)`);
 
     // ── Merge geometry from all sectors ─────────────────────────────────────
     const matGroups   = new Map();
@@ -51,7 +56,8 @@ export class BSPParser {
     const normalBufs  = [];
     const prelitBufs  = [];
     const uvBufs      = []; // one entry per sector: Float32Array[numActualUVSets][N×2]
-    let   actualUVSets = 0; // derived from first sector's data
+    let   actualUVSets   = 0; // derived from first sector's data
+    let   detectedNormBytes = hasNormals ? 4 : 0; // auto-detected below
     let   vertOffset  = 0;
     let   totalSkip   = 0;
 
@@ -70,42 +76,61 @@ export class BSPParser {
       const triStart  = astBodyStart + astSize - numTriangles * 8;
       if (vertStart >= triStart) continue;
 
+      const totalVertBytes = triStart - vertStart;
+
+      // ── Auto-detect normal byte size on first populated sector ─────────────
+      // RW World normals can be 4 bytes (packed int8×3+pad) or 12 bytes (float32×3).
+      // We try both and pick whichever produces an integer UV set count.
+      if (hasNormals && actualUVSets === 0) {
+        const prelitBytes = hasPrelit ? 4 : 0;
+        const bytesAvailWith4  = totalVertBytes / numVertices - 12 - 4  - prelitBytes;
+        const bytesAvailWith12 = totalVertBytes / numVertices - 12 - 12 - prelitBytes;
+        const clean4  = bytesAvailWith4  >= 0 && (bytesAvailWith4  % 8) === 0;
+        const clean12 = bytesAvailWith12 >= 0 && (bytesAvailWith12 % 8) === 0;
+        if (!clean4 && clean12) {
+          detectedNormBytes = 12;
+        } else {
+          // Default to 4 (packed) when ambiguous or both clean
+          detectedNormBytes = 4;
+        }
+        if (BSPParser.DEBUG) console.log(`[BSP norms] detected ${detectedNormBytes}-byte normals (clean4=${clean4} clean12=${clean12})`);
+      }
+
       // Derive actual UV set count from vertex data byte range
-      // Total vertex data = triStart - vertStart
-      // Fixed per-vertex: 12 (pos) + 4*hasNormals (packed uint8×4) + 4*hasPrelit
-      const fixedBytesPerVert = 12 + (hasNormals ? 4 : 0) + (hasPrelit ? 4 : 0);
-      const totalVertBytes    = triStart - vertStart;
+      const fixedBytesPerVert = 12 + (hasNormals ? detectedNormBytes : 0) + (hasPrelit ? 4 : 0);
       const uvBytesPerVert    = totalVertBytes / numVertices - fixedBytesPerVert;
       const derivedUVSets     = Math.max(0, Math.round(uvBytesPerVert / 8));
 
       // On first sector, log and store
       if (actualUVSets === 0) {
         actualUVSets = derivedUVSets;
-        console.log(`[BSP UV] worldFmt says numUV=${numUVSets}, derived=${derivedUVSets} from vertex layout`);
+        if (BSPParser.DEBUG) {
+          console.log(`[BSP UV] worldFmt says numUV=${numUVSets}, derived=${derivedUVSets} from vertex layout`);
 
-        // Log position range from first sector
-        let minX = Infinity, maxX = -Infinity, minZ = Infinity, maxZ = -Infinity;
-        for (let i = 0; i < numVertices; i++) {
-          const b = vertStart + i * 12;
-          const x = view.getFloat32(b,     true);
-          const z = view.getFloat32(b + 8, true);
-          if (isFinite(x)) { minX = Math.min(minX, x); maxX = Math.max(maxX, x); }
-          if (isFinite(z)) { minZ = Math.min(minZ, z); maxZ = Math.max(maxZ, z); }
-        }
-        console.log(`[BSP pos] X=[${minX.toFixed(1)}, ${maxX.toFixed(1)}] Z=[${minZ.toFixed(1)}, ${maxZ.toFixed(1)}] spans: ${(maxX-minX).toFixed(1)} × ${(maxZ-minZ).toFixed(1)}`);
-
-        // Log range of each UV set from first sector
-        const uvBaseStart = vertStart + numVertices * fixedBytesPerVert;
-        for (let s = 0; s < derivedUVSets; s++) {
-          let minU = Infinity, maxU = -Infinity, minV = Infinity, maxV = -Infinity;
-          const base = uvBaseStart + s * numVertices * 8;
+          // Log position range from first sector
+          let minX = Infinity, maxX = -Infinity, minZ = Infinity, maxZ = -Infinity;
           for (let i = 0; i < numVertices; i++) {
-            const u = view.getFloat32(base + i*8,     true);
-            const v = view.getFloat32(base + i*8 + 4, true);
-            if (isFinite(u)) { minU = Math.min(minU, u); maxU = Math.max(maxU, u); }
-            if (isFinite(v)) { minV = Math.min(minV, v); maxV = Math.max(maxV, v); }
+            const b = vertStart + i * 12;
+            const x = view.getFloat32(b,     true);
+            const z = view.getFloat32(b + 8, true);
+            if (isFinite(x)) { minX = Math.min(minX, x); maxX = Math.max(maxX, x); }
+            if (isFinite(z)) { minZ = Math.min(minZ, z); maxZ = Math.max(maxZ, z); }
           }
-          console.log(`[BSP UV${s}] U=[${minU.toFixed(3)}, ${maxU.toFixed(3)}] V=[${minV.toFixed(3)}, ${maxV.toFixed(3)}]`);
+          console.log(`[BSP pos] X=[${minX.toFixed(1)}, ${maxX.toFixed(1)}] Z=[${minZ.toFixed(1)}, ${maxZ.toFixed(1)}] spans: ${(maxX-minX).toFixed(1)} × ${(maxZ-minZ).toFixed(1)}`);
+
+          // Log range of each UV set from first sector
+          const uvBaseStart = vertStart + numVertices * fixedBytesPerVert;
+          for (let s = 0; s < derivedUVSets; s++) {
+            let minU = Infinity, maxU = -Infinity, minV = Infinity, maxV = -Infinity;
+            const base = uvBaseStart + s * numVertices * 8;
+            for (let i = 0; i < numVertices; i++) {
+              const u = view.getFloat32(base + i*8,     true);
+              const v = view.getFloat32(base + i*8 + 4, true);
+              if (isFinite(u)) { minU = Math.min(minU, u); maxU = Math.max(maxU, u); }
+              if (isFinite(v)) { minV = Math.min(minV, v); maxV = Math.max(maxV, v); }
+            }
+            console.log(`[BSP UV${s}] U=[${minU.toFixed(3)}, ${maxU.toFixed(3)}] V=[${minV.toFixed(3)}, ${maxV.toFixed(3)}]`);
+          }
         }
       }
 
@@ -118,18 +143,29 @@ export class BSPParser {
         verts[i*3+2] = view.getFloat32(b + 8, true);
       }
 
-      // Normals (if present, stored right after positions as packed uint8×3 + int8 padding = 4 bytes)
+      // Normals (if present)
+      // 4-byte packed: 3×uint8 mapped to [-1,1] + 1 byte padding
+      // 12-byte float: 3×float32
       let norms = null;
       if (hasNormals) {
         norms = new Float32Array(numVertices * 3);
         const normStart = vertStart + numVertices * 12;
-        const bytes = new Uint8Array(buffer);
-        for (let i = 0; i < numVertices; i++) {
-          const b = normStart + i * 4;
-          // Convert uint8 [0,255] to float [-1,1]: (val - 128) / 127
-          norms[i*3]   = (bytes[b]     - 128) / 127.0;
-          norms[i*3+1] = (bytes[b + 1] - 128) / 127.0;
-          norms[i*3+2] = (bytes[b + 2] - 128) / 127.0;
+        if (detectedNormBytes === 12) {
+          for (let i = 0; i < numVertices; i++) {
+            const b = normStart + i * 12;
+            norms[i*3]   = view.getFloat32(b,     true);
+            norms[i*3+1] = view.getFloat32(b + 4, true);
+            norms[i*3+2] = view.getFloat32(b + 8, true);
+          }
+        } else {
+          // packed uint8 [0,255] → float [-1,1]: (val - 128) / 127
+          const bytes = new Uint8Array(buffer);
+          for (let i = 0; i < numVertices; i++) {
+            const b = normStart + i * 4;
+            norms[i*3]   = (bytes[b]     - 128) / 127.0;
+            norms[i*3+1] = (bytes[b + 1] - 128) / 127.0;
+            norms[i*3+2] = (bytes[b + 2] - 128) / 127.0;
+          }
         }
       }
 
@@ -137,7 +173,7 @@ export class BSPParser {
       let prelitColors = null;
       if (hasPrelit) {
         prelitColors = new Float32Array(numVertices * 4);
-        const prelitStart = vertStart + numVertices * 12 + (hasNormals ? numVertices * 4 : 0);
+        const prelitStart = vertStart + numVertices * 12 + (hasNormals ? numVertices * detectedNormBytes : 0);
         const bytes = new Uint8Array(buffer);
         for (let i = 0; i < numVertices; i++) {
           const b = prelitStart + i * 4;
@@ -148,7 +184,8 @@ export class BSPParser {
         }
       }
 
-      // Read all derived UV sets for this sector
+      // Read all derived UV sets for this sector.
+      // UV sets are stored as contiguous blocks: all verts for set0, then set1, etc.
       const uvBaseStart = vertStart + numVertices * fixedBytesPerVert;
       const sectorUVs = [];
       for (let s = 0; s < derivedUVSets; s++) {
@@ -161,7 +198,7 @@ export class BSPParser {
         sectorUVs.push(arr);
       }
 
-      // Triangles: [v1, v2, v3, matOffset]
+      // Triangles: [v1, v2, v3, matOffset] — 8 bytes per face
       for (let i = 0; i < numTriangles; i++) {
         const b  = triStart + i * 8;
         const v1 = view.getUint16(b,     true);
@@ -183,24 +220,26 @@ export class BSPParser {
 
     if (vertOffset === 0) return null;
 
-    // Merge all sectors into flat arrays, one per UV set
-    const vertices = new Float32Array(vertOffset * 3);
-    const normals  = hasNormals ? new Float32Array(vertOffset * 3) : null;
-    const prelitColors = hasPrelit ? new Float32Array(vertOffset * 4) : null;
-    const uvSets   = Array.from({ length: actualUVSets }, () => new Float32Array(vertOffset * 2));
+    // ── Merge all sectors into flat typed arrays, one per UV set ────────────
+    const vertices    = new Float32Array(vertOffset * 3);
+    const normals     = hasNormals ? new Float32Array(vertOffset * 3) : null;
+    const prelitOut   = hasPrelit  ? new Float32Array(vertOffset * 4) : null;
+    const uvSets      = Array.from({ length: actualUVSets }, () => new Float32Array(vertOffset * 2));
     let vOff = 0, nOff = 0, pOff = 0, uOff = 0;
     for (let i = 0; i < vertBufs.length; i++) {
       vertices.set(vertBufs[i], vOff); vOff += vertBufs[i].length;
-      if (normals && normalBufs[i]) { normals.set(normalBufs[i], nOff); nOff += normalBufs[i].length; }
-      if (prelitColors && prelitBufs[i]) { prelitColors.set(prelitBufs[i], pOff); pOff += prelitBufs[i].length; }
+      if (normals   && normalBufs[i]) { normals.set(normalBufs[i], nOff);   nOff += normalBufs[i].length; }
+      if (prelitOut && prelitBufs[i]) { prelitOut.set(prelitBufs[i], pOff); pOff += prelitBufs[i].length; }
       for (let s = 0; s < actualUVSets; s++) {
         if (uvBufs[i][s]) uvSets[s].set(uvBufs[i][s], uOff);
       }
       uOff += uvBufs[i][0]?.length ?? 0;
     }
 
-    console.log(`[BSP geo] verts=${vertOffset} groups=${matGroups.size} skip=${totalSkip} uvSets=${actualUVSets} normals=${!!normals} prelit=${!!prelitColors}`);
-    return { vertices, normals, prelitColors, uvSets, matGroups };
+    if (BSPParser.DEBUG) {
+      console.log(`[BSP geo] verts=${vertOffset} groups=${matGroups.size} skip=${totalSkip} uvSets=${actualUVSets} normals=${!!normals} prelit=${!!prelitOut} normBytes=${detectedNormBytes}`);
+    }
+    return { vertices, normals, prelitColors: prelitOut, uvSets, matGroups };
   }
 
   // Scan a chunk range and collect all AtomicSection (0x0009) positions into `out`.
@@ -269,9 +308,14 @@ export class BSPParser {
       const mEnd = r.pos + size;
 
       if (type === 0x0007) { // Material
-        const mat = { c0: null, c1: null, c2: null, c3: null, textureName: null,
-                      ltmapTex: null, layerScale: [1.0, 1.0, 1.0, 1.0],
-                      layerUV: [0, 0, 0, 0] }; // 0=UV1(primary tiling), 1=UV3(secondary); overridden by c_layerUV0-3
+        const mat = {
+          c0: null, c1: null, c2: null, c3: null, textureName: null,
+          ltmapTex: null, aoTex1: null, specTex0: null, selfIlumTex0: null, sssTex: null,
+          layerScale: [1.0, 1.0, 1.0, 1.0],
+          layerUV: [0, 0, 0, 0],
+          layerEdge: [0.0, 0.0, 0.0],            // c_layerEdge1-3
+          layerDisplace: [0.0, 0.0, 0.0, 0.0],   // c_layerDiplace0-3
+        };
         this._parseMaterial(r, mEnd, mat);
         materials.push(mat);
       } else {
@@ -325,6 +369,17 @@ export class BSPParser {
     return dv.getUint32(off, true);
   }
 
+  // Helper: read as float, but if the value is denormalized (tiny), treat the bits as uint32.
+  // Many AliceAsset params are stored as integers even in "float" slots.
+  _readParamAuto(body, dv, dataPos) {
+    const off = dataPos + 5 + 8;
+    if (off + 4 > body.length) return null;
+    const f = dv.getFloat32(off, true);
+    if (isFinite(f) && Math.abs(f) > 1e-30) return f;
+    // Denormalized float → likely an integer stored as raw bits
+    return dv.getUint32(off, true);
+  }
+
   // Helper: given body bytes and a dataPos pointing at "data\0",
   // try to read a null-terminated string path and return its basename (without .dds).
   _readParamString(body, dataPos) {
@@ -363,6 +418,21 @@ export class BSPParser {
     const body = new Uint8Array(r.buf, r.pos, end - r.pos);
     const dv   = new DataView(r.buf, r.pos, end - r.pos);
 
+    // ── Dump all c_ parameter names for debugging ───────────────────────────
+    if (BSPParser.DEBUG) {
+      const c_ = [99, 95]; // "c_"
+      const allParams = [];
+      for (let i = 0; i < body.length - 2; i++) {
+        if (body[i] === c_[0] && body[i + 1] === c_[1]) {
+          let name = '';
+          for (let j = i; j < body.length && body[j] !== 0 && body[j] >= 32 && body[j] < 127; j++)
+            name += String.fromCharCode(body[j]);
+          if (name.length > 2 && name.length < 60) allParams.push(name);
+        }
+      }
+      if (allParams.length) console.log(`[AlicePlugin params]`, [...new Set(allParams)]);
+    }
+
     // ── Extract c_diffTex0–3 (diffuse layer textures) ───────────────────────
     for (let ch = 0; ch <= 3; ch++) {
       const keyPos = this._findBytes(body, `c_diffTex${ch}\0`);
@@ -383,6 +453,18 @@ export class BSPParser {
           if (name) mat.ltmapTex = name;
         }
       }
+    }
+
+    // ── Extract c_aoTex1, c_specTex0, c_selfIlumTex0, c_sssTex0 ──────────────────────
+    for (const paramName of ['c_aoTex1', 'c_specTex0', 'c_selfIlumTex0', 'c_sssTex0']) {
+      const keyPos = this._findBytes(body, paramName + '\0');
+      if (keyPos < 0) continue;
+      const dataPos = this._findBytes(body, 'data\0', keyPos);
+      if (dataPos < 0 || dataPos - keyPos > 200) continue;
+      const name = this._readParamString(body, dataPos);
+      const fieldMap = { 'c_aoTex1': 'aoTex1', 'c_specTex0': 'specTex0', 'c_selfIlumTex0': 'selfIlumTex0', 'c_sssTex0': 'sssTex' };
+      const field = fieldMap[paramName] ?? paramName.replace('c_', '');
+      if (name) mat[field] = name;
     }
 
     // ── Extract c_layerScale0–3 (per-layer UV tiling multiplier) ────────────
@@ -406,7 +488,30 @@ export class BSPParser {
       if (v !== null && v < 16) { mat.layerUV[ch] = v; uvFound.push(v); }
       else uvFound.push(`raw=${v}`);
     }
-    console.log(`[AlicePlugin] c_layerUV=[${uvFound.join(',')}] c_layerScale=[${mat.layerScale.map(f=>f.toFixed(3)).join(',')}] c0=${mat.c0} ltmap=${mat.ltmapTex}`);
+
+    // ── Extract c_layerEdge1–3 (transition edge sharpness) ─────────────────
+    for (let ch = 1; ch <= 3; ch++) {
+      const keyPos = this._findBytes(body, `c_layerEdge${ch}\0`);
+      if (keyPos < 0) continue;
+      const dataPos = this._findBytes(body, 'data\0', keyPos);
+      if (dataPos < 0 || dataPos - keyPos > 200) continue;
+      const v = this._readParamAuto(body, dv, dataPos);
+      if (v !== null) mat.layerEdge[ch - 1] = v;
+    }
+
+    // ── Extract c_layerDiplace0–3 (height displacement per layer) ────────
+    for (let ch = 0; ch <= 3; ch++) {
+      const keyPos = this._findBytes(body, `c_layerDiplace${ch}\0`);
+      if (keyPos < 0) continue;
+      const dataPos = this._findBytes(body, 'data\0', keyPos);
+      if (dataPos < 0 || dataPos - keyPos > 200) continue;
+      const v = this._readParamAuto(body, dv, dataPos);
+      if (v !== null) mat.layerDisplace[ch] = v;
+    }
+
+    if (BSPParser.DEBUG) {
+      console.log(`[AlicePlugin] c_layerUV=[${uvFound.join(',')}] c_layerScale=[${mat.layerScale.map(f=>f.toFixed(3)).join(',')}] c0=${mat.c0} ltmap=${mat.ltmapTex} sss=${mat.sssTex} edge=[${mat.layerEdge}] displace=[${mat.layerDisplace}]`);
+    }
   }
 
   _findBytes(arr, str, startAt = 0) {

@@ -28,16 +28,24 @@ function buildSharedFrameNameMap(frames) {
 }
 
 function getFrameSkinBoneId(frame, frameIndex, skin, useNodeIds = false) {
-  const nodeId = Number(frame?.nodeId);
-  if (Number.isInteger(nodeId) && nodeId >= 0 && nodeId < skin.numBones) return nodeId;
-  if (useNodeIds) return -1;
+  // Only treat nodeId as valid if it was explicitly set (not null/undefined).
+  // Number(null) === 0 would otherwise map every un-parsed frame to bone 0.
+  if (frame?.nodeId != null) {
+    const nodeId = Number(frame.nodeId);
+    if (Number.isInteger(nodeId) && nodeId >= 0 && nodeId < skin.numBones) return nodeId;
+    // nodeId was set but out of range — respect useNodeIds to avoid bad fallback.
+    if (useNodeIds) return -1;
+  }
+  // nodeId was never set (null) — always fall back to frameIndex regardless of useNodeIds.
+  // This handles extra DFF-specific bones (e.g. armor attachment bones) that have no HAnim.
   if (frameIndex >= 0 && frameIndex < skin.numBones) return frameIndex;
   return -1;
 }
 
 function buildSkinBinding(frames, skin) {
   const useNodeIds = frames.some((frame) => {
-    const nodeId = Number(frame?.nodeId);
+    if (frame?.nodeId == null) return false;
+    const nodeId = Number(frame.nodeId);
     return Number.isInteger(nodeId) && nodeId >= 0 && nodeId < skin.numBones;
   });
 
@@ -163,13 +171,13 @@ function buildHairBoneLinks(localFrames, localBones) {
   return links;
 }
 
-function buildBoneLinks(localFrames, localBones, slotId = '') {
+export function buildBoneLinks(localFrames, localBones, slotId = '') {
   if (!state.sharedFrames?.length || !state.sharedBones?.length) return [];
 
   const sharedByName = buildSharedFrameNameMap(state.sharedFrames);
   const links = [];
   const syncPositionNames = new Set(['Opt_Bip01']);
-  if (slotId === 'hat') {
+  if (slotId === 'hat' || slotId === 'accessory') {
     syncPositionNames.add('Opt_Bip01_Neck');
     syncPositionNames.add('Opt_Bip01_Head');
   }
@@ -391,7 +399,10 @@ export async function buildMesh(geo, texDir, bones, frames, boneInverses = null,
       const alphaMapTex = alphaMaskStem
         ? await loadTexture(texDir, alphaMaskStem, THREE.LinearSRGBColorSpace)
         : null;
-      const alphaClip = alphaTestEnabled ? 0.30 : 0.0;
+      // +ab = DXT5 texture with embedded alpha channel (alpha blended, e.g. lace/mesh fabric).
+      // transparent:true + depthWrite:true gives blending while keeping correct depth occlusion.
+      const alphaBlend = /\+ab\b/i.test(texName ?? '');
+      const alphaClip  = alphaTestEnabled ? 0.30 : 0.0;
 
       mat = geo.colors != null
         ? new THREE.MeshBasicMaterial({
@@ -400,8 +411,9 @@ export async function buildMesh(geo, texDir, bones, frames, boneInverses = null,
             color:        new THREE.Color(1, 1, 1),
             vertexColors: !disableTerrainVertexTint,
             side:         THREE.DoubleSide,
-            transparent:  false,
-            alphaTest:    alphaClip,
+            transparent:  alphaBlend,
+            depthWrite:   true,
+            alphaTest:    alphaBlend ? 0.0 : alphaClip,
           })
         : new THREE.MeshPhongMaterial({
             map:          texSet.map     ?? null,
@@ -413,9 +425,13 @@ export async function buildMesh(geo, texDir, bones, frames, boneInverses = null,
             shininess:    40,
             emissive:     texSet.sssMap ? new THREE.Color(0.12, 0.09, 0.07) : new THREE.Color(0, 0, 0),
             side:         THREE.DoubleSide,
-            transparent:  false,
-            alphaTest:    alphaClip,
+            transparent:  alphaBlend,
+            depthWrite:   true,
+            alphaTest:    alphaBlend ? 0.0 : alphaClip,
           });
+      // Store the DFF texture stem on the material so coat/skin swaps can match by name
+      // even when mat.map is null (texture failed to load) or is a compressed DDS.
+      if (texName) mat.userData.dffTexName = normalizeTextureStem(texName)?.toLowerCase() ?? '';
     }
     mats.push(mat);
   }
@@ -474,6 +490,19 @@ async function loadSlot(slotId, meshName) {
       ? (useHairBoneLinks ? buildHairBoneLinks(useFrames, useBones) : [])
       : buildBoneLinks(useFrames, useBones, slotId);
     attachLocalSkeleton = slotId === 'hair' && !useHairBoneLinks;
+    // Accessories with no bone links: the DFF has no named skeleton frames, so we
+    // attach both the group (for non-skinned meshes) and the root bone (for skinned
+    // meshes) directly to the shared head bone.
+    if (slotId === 'accessory' && !boneLinks.length) {
+      const sharedHeadBone = findSharedBoneByName('Opt_Bip01_Head');
+      if (sharedHeadBone) {
+        // Drive the mesh group to the head position each frame (handles plain Mesh).
+        attachmentBinding = { source: sharedHeadBone, target: skeletonRoot, targetLocalInverse: null, direct: true };
+        // Also parent the skeleton root under the head bone (handles SkinnedMesh).
+        sharedHeadBone.add(skeletonRoot);
+        attachLocalSkeleton = true;
+      }
+    }
     if (!attachLocalSkeleton) state.sceneGroup.add(skeletonRoot);
   }
 
@@ -503,7 +532,7 @@ async function loadSlot(slotId, meshName) {
 
   state.sceneGroup.add(group);
   if (attachmentBinding) {
-    captureAttachmentTargetLocalInverse(group, attachmentBinding);
+    if (!attachmentBinding.direct) captureAttachmentTargetLocalInverse(group, attachmentBinding);
     syncAttachmentGroup(group, attachmentBinding);
   }
   if (boneLinks.length && (alwaysSyncBoneLinks || hasActiveAnimationPose())) {
@@ -545,19 +574,18 @@ export async function loadCharacter(char) {
     return;
   }
 
-  const selects = document.querySelectorAll('.slot-select');
+  const pickers = ui.slotsPanel.querySelectorAll('.slot-picker');
   const loads = [];
-  for (const sel of selects) {
-    if (sel.value) loads.push(loadSlot(sel.dataset.slot, sel.value));
+  for (const picker of pickers) {
+    const mesh = picker.dataset.selected;
+    if (mesh) loads.push(loadSlot(picker.dataset.slot, mesh));
   }
 
   setStatus(`Loading ${char}…`);
-  try {
-    await Promise.all(loads);
-  } catch (e) {
-    setStatus(`Load error: ${e.message}`, true);
-    console.error(e);
-    return;
+  const results = await Promise.allSettled(loads);
+  const failed = results.filter(r => r.status === 'rejected');
+  if (failed.length) {
+    failed.forEach(r => console.warn('[slot] failed to load:', r.reason));
   }
 
   const box = new THREE.Box3().setFromObject(state.sceneGroup);
@@ -569,6 +597,19 @@ export async function loadCharacter(char) {
     controls.target.set(0, h * 0.55, 0);
     camera.position.set(0, h * 0.55, h * 1.8);
     controls.update();
+  }
+
+  // Recompute all skeleton inverse bind matrices after camera-fit repositions sceneGroup.
+  state.sceneGroup.updateMatrixWorld(true);
+  const seenSkeletons = new Set();
+  state.sceneGroup.traverse(obj => {
+    if (obj.isSkinnedMesh && !seenSkeletons.has(obj.skeleton)) {
+      seenSkeletons.add(obj.skeleton);
+      obj.skeleton.calculateInverses();
+    }
+  });
+  if (state.sharedBones?.length) {
+    state.sharedBoneInverses = state.sharedBones.map(b => b.matrixWorld.clone().invert());
   }
 
   state.sceneGroup.traverse(obj => {
@@ -588,71 +629,108 @@ export async function loadCharacter(char) {
 }
 
 // ─── Slot UI ──────────────────────────────────────────────────────────────────
+function slotIconUrl(iconFile) {
+  if (!iconFile) return null;
+  const charMatch = iconFile.match(/^icon_(r\d+)_/);
+  if (charMatch) return `${BASE}/graphics/ui/game/icon/char/${charMatch[1]}/${iconFile}.png`;
+  return `${BASE}/graphics/ui/game/make_account/${iconFile}.png`;
+}
+
+function setPickerSelected(picker, mesh) {
+  picker.dataset.selected = mesh ?? '';
+  for (const btn of picker.querySelectorAll('.slot-item')) {
+    btn.classList.toggle('active', btn.dataset.mesh === (mesh ?? ''));
+  }
+}
+
+function clearSlotPart(slotId) {
+  if (!state.activeParts[slotId]) return;
+  state.sceneGroup.remove(state.activeParts[slotId].mesh);
+  if (state.activeParts[slotId].skeletonRoot?.parent)
+    state.activeParts[slotId].skeletonRoot.parent.remove(state.activeParts[slotId].skeletonRoot);
+  (state.activeParts[slotId].attachedBones ?? []).forEach(b => b.parent?.remove(b));
+  delete state.activeParts[slotId];
+}
+
 export function buildSlotUI(charData) {
   ui.slotsPanel.innerHTML = '';
   for (const slot of charData.slots) {
     if (!slot.parts.length) continue;
-
-    const row = document.createElement('div');
-    row.className = 'slot-row';
-
-    const label = document.createElement('label');
-    label.textContent = slot.label;
-    label.htmlFor = `slot-${slot.id}`;
-
-    const sel = document.createElement('select');
-    sel.id           = `slot-${slot.id}`;
-    sel.className    = 'slot-select';
-    sel.dataset.slot = slot.id;
-
-    const none = document.createElement('option');
-    none.value = ''; none.textContent = '— none —';
-    sel.appendChild(none);
-
-    for (const part of slot.parts) {
-      const opt = document.createElement('option');
-      opt.value = part.mesh;
-      opt.textContent = part.desc !== part.mesh
-        ? part.desc
-        : part.mesh.replace(/^r0\d_/, '').replace(/_00_[a-z]$/, '');
-      if (!part.released) opt.textContent += ' ✦';
-      sel.appendChild(opt);
-    }
 
     const dressSet = slot.id === 'top'
       ? new Set(slot.parts.filter(p => p.dress).map(p => p.mesh))
       : null;
 
     const first = slot.parts.find(p => p.released) ?? slot.parts[0];
-    if (first) sel.value = first.mesh;
 
-    sel.addEventListener('change', async () => {
-      if (!state.sceneGroup) return;
-      if (!sel.value) {
-        if (state.activeParts[slot.id]) {
-          state.sceneGroup.remove(state.activeParts[slot.id].mesh);
-          if (state.activeParts[slot.id].skeletonRoot?.parent) state.activeParts[slot.id].skeletonRoot.parent.remove(state.activeParts[slot.id].skeletonRoot);
-          (state.activeParts[slot.id].attachedBones ?? []).forEach((bone) => bone.parent?.remove(bone));
-          delete state.activeParts[slot.id];
-        }
+    const row = document.createElement('div');
+    row.className = 'slot-row';
+
+    const label = document.createElement('label');
+    label.textContent = slot.label;
+    row.appendChild(label);
+
+    const picker = document.createElement('div');
+    picker.className      = 'slot-picker';
+    picker.dataset.slot   = slot.id;
+    picker.dataset.selected = first?.mesh ?? '';
+
+    // None button
+    const noneBtn = document.createElement('button');
+    noneBtn.className  = 'slot-item slot-none';
+    noneBtn.dataset.mesh = '';
+    noneBtn.title      = 'None';
+    noneBtn.textContent = '✕';
+    picker.appendChild(noneBtn);
+
+    for (const part of slot.parts) {
+      const btn = document.createElement('button');
+      btn.className    = 'slot-item' + (part.mesh === first?.mesh ? ' active' : '');
+      btn.dataset.mesh = part.mesh;
+      const label2 = part.desc !== part.mesh
+        ? part.desc
+        : part.mesh.replace(/^r0\d_/, '').replace(/_00_[a-z]$/, '');
+      btn.title = label2 + (part.released ? '' : ' ✦');
+      if (!part.released) btn.classList.add('unreleased');
+
+      const url = slotIconUrl(part.iconFile);
+      if (url) {
+        const img = document.createElement('img');
+        img.src = url;
+        img.alt = '';
+        img.draggable = false;
+        btn.appendChild(img);
+      } else {
+        btn.textContent = label2;
+        btn.classList.add('slot-text');
+      }
+      picker.appendChild(btn);
+    }
+
+    picker.addEventListener('click', async (e) => {
+      const btn = e.target.closest('.slot-item');
+      if (!btn || !state.sceneGroup) return;
+      const mesh = btn.dataset.mesh;
+
+      setPickerSelected(picker, mesh);
+
+      if (!mesh) {
+        clearSlotPart(slot.id);
         return;
       }
-      if (slot.id === 'top' && dressSet?.has(sel.value)) {
-        const bottomSel = document.getElementById('slot-bottom');
-        if (bottomSel && bottomSel.value) {
-          bottomSel.value = '';
-          if (state.activeParts['bottom']) {
-            state.sceneGroup.remove(state.activeParts['bottom'].mesh);
-            if (state.activeParts['bottom'].skeletonRoot?.parent) state.activeParts['bottom'].skeletonRoot.parent.remove(state.activeParts['bottom'].skeletonRoot);
-            (state.activeParts['bottom'].attachedBones ?? []).forEach((bone) => bone.parent?.remove(bone));
-            delete state.activeParts['bottom'];
-          }
+
+      if (slot.id === 'top' && dressSet?.has(mesh)) {
+        const botPicker = ui.slotsPanel.querySelector('.slot-picker[data-slot="bottom"]');
+        if (botPicker && botPicker.dataset.selected) {
+          setPickerSelected(botPicker, '');
+          clearSlotPart('bottom');
         }
       }
+
       try {
         setStatus(`Swapping ${slot.label}…`);
-        await loadSlot(slot.id, sel.value);
-        setStatus(`${state.charName}  —  ${slot.label} → ${sel.value}`);
+        await loadSlot(slot.id, mesh);
+        setStatus(`${state.charName}  —  ${slot.label} → ${mesh}`);
         rebuildSkeletonHelper();
       } catch (e) {
         setStatus(`Slot error: ${e.message}`, true);
@@ -660,17 +738,19 @@ export function buildSlotUI(charData) {
       }
     });
 
-    row.appendChild(label);
-    row.appendChild(sel);
+    row.appendChild(picker);
     ui.slotsPanel.appendChild(row);
   }
 
+  // If initial top selection is a dress, clear bottom
   const topSlot = charData.slots.find(s => s.id === 'top');
-  const topSel  = document.getElementById('slot-top');
-  const botSel  = document.getElementById('slot-bottom');
-  if (topSlot && topSel && botSel) {
-    const selectedPart = topSlot.parts.find(p => p.mesh === topSel.value);
-    if (selectedPart?.dress) botSel.value = '';
+  if (topSlot) {
+    const topPicker = ui.slotsPanel.querySelector('.slot-picker[data-slot="top"]');
+    const botPicker = ui.slotsPanel.querySelector('.slot-picker[data-slot="bottom"]');
+    if (topPicker && botPicker) {
+      const selectedPart = topSlot.parts.find(p => p.mesh === topPicker.dataset.selected);
+      if (selectedPart?.dress) setPickerSelected(botPicker, '');
+    }
   }
 }
 
@@ -692,7 +772,6 @@ export async function populateAnimList(anmDir) {
     let files;
 
     if (state.pakListing) {
-      // Filter PAK listing for .anm files under the animation directory.
       const anmDirNorm = anmDir.replace(/\\/g, '/').toLowerCase();
       files = state.pakListing
         .map(e => e.path.replace(/\\/g, '/'))
@@ -707,8 +786,9 @@ export async function populateAnimList(anmDir) {
 
     for (const file of files) {
       const li = document.createElement('li');
-      li.textContent = file.replace(/\.anm$/i, '').replace(/^r0\d_/, '');
-      li.title       = file;
+      const decoded = decodeURIComponent(file);
+      li.textContent = decoded.replace(/\.anm$/i, '').replace(/^r0\d_/, '');
+      li.title       = decoded;
       li.dataset.url = `${BASE}/${anmDir}/${file}`;
       li.addEventListener('click', () => {
         document.querySelectorAll('#anim-list li').forEach(x => x.classList.remove('active'));
@@ -728,8 +808,14 @@ export async function playAnimation(url) {
   const fname = url.split('/').pop().replace(/\.anm$/i, '');
   setStatus(`Loading: ${fname}…`);
   try {
-    const buf     = await fetchBinary(url);
-    const anmData = new ANMParser().parse(buf, 0);
+    const buf = await fetchBinary(url);
+    const numAnimBones = state.sharedFrames
+      ? state.sharedFrames.reduce((max, f) => {
+          const idx = getFrameAnimIndex(f);
+          return idx >= 0 ? Math.max(max, idx + 1) : max;
+        }, 0)
+      : 0;
+    const anmData = new ANMParser().parse(buf, numAnimBones || 0);
     const tracks  = new ANMParser().buildTracks(anmData);
 
     const kwTracks = [];
@@ -740,13 +826,31 @@ export async function playAnimation(url) {
       if (!t?.times.length) return;
       const boneName = state.sharedBones?.[frameIndex]?.name ?? `bone_${frameIndex}`;
       kwTracks.push(new THREE.QuaternionKeyframeTrack(`${boneName}.quaternion`, t.times, t.quaternions));
-      kwTracks.push(new THREE.VectorKeyframeTrack(`${boneName}.position`, t.times, t.positions));
+      // Only apply position tracks to the HAnim root bone (the first direct child of the
+      // dummy root). Non-root bone ANM positions can diverge significantly from the DFF bind
+      // pose (especially wrist/palm twist bones — measured ~1.18 unit delta for hIdx 33 & 58),
+      // causing those bones to snap far from their bind position every frame, producing the
+      // "stretched fingers/arms" deformation. Non-root bones should only rotate in-place from
+      // their DFF bind positions, not have their positions overridden by the ANM.
+      const isHAnimRoot = frame.hierarchyIndex === 0;
+      if (isHAnimRoot) {
+        kwTracks.push(new THREE.VectorKeyframeTrack(`${boneName}.position`, t.times, t.positions));
+      }
     });
 
-    const clip    = new THREE.AnimationClip(fname, -1, kwTracks);
+    const clip = new THREE.AnimationClip(fname, -1, kwTracks);
     state.currentAction = state.mixer.clipAction(clip);
     state.currentAction.reset().setLoop(THREE.LoopRepeat).play();
-    state.animPaused    = false;
+    // Force the mixer to apply frame 0 before we re-capture hair attachment offsets,
+    // so the head bone is at its animated position when we measure the offset.
+    state.mixer.update(0);
+    // Re-capture animation attachment offsets for parts that use position-based syncing
+    // (e.g. physics hair). The offset must be measured after the animation has set the
+    // head bone to its t=0 position, not before.
+    Object.values(state.activeParts).forEach(part => {
+      if (part.animationAttachment) captureAnimationAttachmentOffset(part.mesh, part.animationAttachment);
+    });
+    state.animPaused = false;
     ui.timeline.max  = clip.duration;
     ui.timeline.value = 0;
     setStatus(`▶ ${fname}  (${anmData.numBones} bones, ${clip.duration.toFixed(2)}s)`);
